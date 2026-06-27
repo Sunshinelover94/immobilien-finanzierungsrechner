@@ -77,7 +77,15 @@
   button.act.alt{background:linear-gradient(135deg,#1a2332,#2c3e52);}
   .pos{color:var(--good);} .neg{color:var(--bad);}
   .disclaimer{font-size:.74rem; color:var(--muted); border-top:1px solid var(--line); margin-top:10px; padding-top:10px;}
-  @media print{ body{background:#fff;} header{background:#1a2332!important; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  .drop{border:1.5px dashed var(--teal); border-radius:10px; padding:8px 10px; margin-bottom:10px; font-size:.76rem; color:var(--teal);
+    text-align:center; cursor:pointer; background:#f3fbfb; transition:background .15s,border-color .15s;}
+  .drop.drag{background:#dcefee; border-color:#1d5e5e;}
+  .drop.busy{cursor:progress;}
+  .drop.ok{border-color:var(--good); color:var(--good); background:#eef8f3;}
+  .drop.err{border-color:var(--bad); color:var(--bad); background:#fdeef0;}
+  .dz-status{display:block; margin-top:2px; color:var(--muted); font-size:.7rem;}
+  #aiBar input[type=password]{width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:9px; font-family:inherit; font-size:.92rem;}
+  @media print{ #aiBar,.drop{display:none!important;} body{background:#fff;} header{background:#1a2332!important; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
     .no-print{display:none!important;} .card{break-inside:avoid; box-shadow:none;} .best,thead th{-webkit-print-color-adjust:exact; print-color-adjust:exact;} }
 </style>
 </head>
@@ -116,6 +124,19 @@
           <option value="abfluss">niedrigster Liquiditäts-Abfluss</option>
           <option value="irr">höchste Rendite (IRR)</option>
         </select></div>
+    </div>
+  </div>
+
+  <!-- Angebots-Import -->
+  <div class="card" id="aiBar">
+    <h2>📄 Angebote automatisch einlesen (optional)</h2>
+    <p class="note">Lege je Variante ein Angebot (PDF oder Bild) in die Ablage-Zone der Karte – die Felder werden automatisch gefüllt. Persönliche Daten (Name, IBAN, E-Mail, Telefon) werden <b>vor dem Senden lokal im Browser geschwärzt</b>; nur der geschwärzte Text geht zur Auswertung an die Anthropic-API. Der API-Key bleibt lokal in diesem Browser. Internet wird nur für die Auswertung benötigt – die Rechner selbst laufen offline.</p>
+    <div class="grid g2">
+      <div class="field"><label class="lab">Anthropic API-Key</label><input type="password" id="aiKey" placeholder="sk-ant-…" autocomplete="off"></div>
+      <div class="field"><label class="lab">Modell</label><select id="aiModel">
+        <option value="claude-sonnet-4-6">Sonnet 4.6 (robust, empfohlen)</option>
+        <option value="claude-haiku-4-5-20251001">Haiku 4.5 (schnell/günstig)</option>
+        <option value="claude-opus-4-8">Opus 4.8 (maximal)</option></select></div>
     </div>
   </div>
 
@@ -170,6 +191,11 @@ function vcard(i){
     <div class="vhead">
       <input type="checkbox" id="v${n}_on" ${v.on?"checked":""}>
       <input type="text" class="vname" id="v${n}_name" value="${v.name}">
+    </div>
+    <div class="drop" id="v${n}_drop">
+      📄 Angebot ablegen / klicken (PDF · Bild)
+      <span class="dz-status" id="v${n}_status">füllt die Felder automatisch</span>
+      <input type="file" id="v${n}_file" accept="application/pdf,image/*" style="display:none">
     </div>
     <div class="row">
       <div class="field"><label class="lab">Darlehen</label><div class="il"><input type="number" id="v${n}_d" value="${v.d}" step="1000"><span class="unit">€</span></div></div>
@@ -430,6 +456,81 @@ function exportCSV(){
 document.addEventListener("input",render);
 document.addEventListener("change",render);
 render();
+
+/* ---------- Angebots-Import: lokale Extraktion → Schwärzung → Claude ---------- */
+(function(){
+  const k=localStorage.getItem('anthropicKey'); if(k)$("aiKey").value=k;
+  const m=localStorage.getItem('aiModel'); if(m)$("aiModel").value=m;
+  $("aiKey").addEventListener('change',e=>localStorage.setItem('anthropicKey',e.target.value.trim()));
+  $("aiModel").addEventListener('change',e=>localStorage.setItem('aiModel',e.target.value));
+})();
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Bibliothek nicht ladbar (Internet?)'));document.head.appendChild(s);});}
+async function ensurePdf(){ if(window.pdfjsLib) return window.pdfjsLib;
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  return window.pdfjsLib; }
+async function ensureTess(){ if(window.Tesseract) return window.Tesseract;
+  await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'); return window.Tesseract; }
+async function fileToText(file,setStatus){
+  const isPdf=(file.type==='application/pdf'||/\.pdf$/i.test(file.name));
+  if(isPdf){
+    setStatus('PDF wird gelesen…');
+    const pdfjs=await ensurePdf(); const pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;
+    let txt=''; for(let p=1;p<=pdf.numPages;p++){ const pg=await pdf.getPage(p); const c=await pg.getTextContent(); txt+=c.items.map(i=>i.str).join(' ')+'\n'; }
+    if(txt.replace(/\s/g,'').length>120) return txt;
+    setStatus('Scan erkannt – OCR läuft (kann etwas dauern)…');
+    const T=await ensureTess(); let o='';
+    for(let p=1;p<=Math.min(pdf.numPages,4);p++){ const pg=await pdf.getPage(p); const vp=pg.getViewport({scale:2});
+      const cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
+      await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise; o+=(await T.recognize(cv,'deu')).data.text+'\n'; }
+    return o;
+  }
+  setStatus('Bild-OCR läuft (kann etwas dauern)…');
+  const T=await ensureTess(); return (await T.recognize(file,'deu')).data.text;
+}
+function redact(t){ return String(t)
+  .replace(/\b[A-Z]{2}\d{2}(?:[ ]?\d){10,30}\b/g,'[IBAN]')
+  .replace(/\b[A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b/g,'[BIC]')
+  .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g,'[EMAIL]')
+  .replace(/(?:\+49|0)[\d \/().\-]{6,}\d/g,'[TEL]')
+  .replace(/\b(?:Herr|Frau|Hr\.|Fr\.)\s+[A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)?/g,'[NAME]')
+  .replace(/\b(Kundennummer|Kunden-?Nr\.?|Darlehensnummer|Vertragsnummer|Konto(?:nummer)?)\s*[:\s]*[\w\/-]+/gi,'$1 [NR]'); }
+async function callClaude(text,setStatus){
+  const key=($("aiKey").value||'').trim(); if(!key) throw new Error('Bitte oben den Anthropic API-Key eintragen.');
+  setStatus('Claude wertet aus…');
+  const prompt='Extrahiere die Finanzierungs-Eckdaten aus diesem Bank-Finanzierungsangebot. Antworte AUSSCHLIESSLICH mit EINEM JSON-Objekt (keine Erklärung) mit den Schlüsseln: name (Bank/Produkt, string), darlehen (Nettodarlehensbetrag in EUR, Zahl), sollzins (gebundener Sollzinssatz %, Zahl), tilgung (anfänglicher Tilgungssatz %, Zahl; falls nur die monatliche Rate genannt ist: tilgung = Rate*12/darlehen*100 - sollzins), zinsbindung (Sollzinsbindung in Jahren, Zahl), anschlusszins (% oder null), sondertilgung (jährliche Sondertilgung EUR, sonst 0), disagio (% oder 0), gebuehr (einmalige Gebühren EUR, sonst 0), effektivzins (% oder null), monatsrate (EUR oder null). Zahlen mit Punkt als Dezimaltrennzeichen, ohne Tausenderpunkte und ohne Einheiten. Unbekannt = null.\n\nTEXT:\n'+text.slice(0,9000);
+  const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+    headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:$("aiModel").value,max_tokens:700,messages:[{role:'user',content:prompt}]})});
+  if(!res.ok){ throw new Error('API '+res.status+': '+(await res.text()).slice(0,160)); }
+  const j=await res.json(); const out=(j.content&&j.content[0]&&j.content[0].text)||'';
+  const mm=out.match(/\{[\s\S]*\}/); if(!mm) throw new Error('Keine Daten erkannt.'); return JSON.parse(mm[0]);
+}
+function fillVariant(n,d){
+  const set=(s,v)=>{ if(v!==null&&v!==undefined&&v!==''&&!isNaN(v)) $("v"+n+"_"+s).value=v; };
+  if(d.name) $("v"+n+"_name").value=String(d.name).slice(0,40);
+  set('d',d.darlehen); set('sz',d.sollzins);
+  let tg=d.tilgung; if((tg==null||isNaN(tg))&&d.monatsrate&&d.darlehen&&d.sollzins) tg=d.monatsrate*12/d.darlehen*100-d.sollzins;
+  set('tg', tg!=null&&!isNaN(tg)?Math.round(tg*100)/100:null);
+  set('zb',d.zinsbindung); set('an',d.anschlusszins); set('so',d.sondertilgung); set('di',d.disagio); set('ge',d.gebuehr);
+  $("v"+n+"_on").checked=true; render();
+}
+async function processFile(n,file){
+  const dz=$("v"+n+"_drop"), st=$("v"+n+"_status"); const setStatus=s=>st.textContent=s;
+  dz.classList.remove('ok','err'); dz.classList.add('busy');
+  try{ const data=await callClaude(redact(await fileToText(file,setStatus)),setStatus);
+    fillVariant(n,data); dz.classList.remove('busy'); dz.classList.add('ok'); setStatus('✓ übernommen – bitte Werte prüfen');
+  }catch(err){ dz.classList.remove('busy'); dz.classList.add('err'); setStatus('Fehler: '+(err.message||err)); }
+}
+[1,2,3].forEach(n=>{
+  const dz=$("v"+n+"_drop"), inp=$("v"+n+"_file");
+  dz.addEventListener('click',()=>inp.click());
+  inp.addEventListener('change',e=>{ if(e.target.files[0]) processFile(n,e.target.files[0]); e.target.value=''; });
+  ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag');}));
+  ['dragleave','dragend'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.remove('drag')));
+  dz.addEventListener('drop',e=>{ e.preventDefault(); dz.classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) processFile(n,f); });
+});
+
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(function(){});});}
 </script>
 </body>

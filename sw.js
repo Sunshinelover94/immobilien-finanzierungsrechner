@@ -1,5 +1,5 @@
 /* Service Worker – Cache-First App-Shell (offline-fähig) */
-const CACHE = 'ifr-v2';
+const CACHE = 'ifr-v3';
 const ASSETS = [
   './', 'index.html', 'steuer.html', 'basis.html', 'vergleich.html',
   'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-180.png'
@@ -23,6 +23,8 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  // CDN-Bibliotheken (pdf.js/tesseract) und die Anthropic-API nicht abfangen/cachen
+  if (new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
     caches.match(e.request).then((cached) =>
       cached ||
