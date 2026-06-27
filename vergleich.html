@@ -129,15 +129,8 @@
 
   <!-- Angebots-Import -->
   <div class="card" id="aiBar">
-    <h2>📄 Angebote automatisch einlesen (optional)</h2>
-    <p class="note">Lege je Variante ein Angebot (PDF oder Bild) in die Ablage-Zone der Karte – die Felder werden automatisch gefüllt. Persönliche Daten (Name, IBAN, E-Mail, Telefon) werden <b>vor dem Senden lokal im Browser geschwärzt</b>; nur der geschwärzte Text geht zur Auswertung an die Anthropic-API. Der API-Key bleibt lokal in diesem Browser. Internet wird nur für die Auswertung benötigt – die Rechner selbst laufen offline.</p>
-    <div class="grid g2">
-      <div class="field"><label class="lab">Anthropic API-Key</label><input type="password" id="aiKey" placeholder="sk-ant-…" autocomplete="off"></div>
-      <div class="field"><label class="lab">Modell</label><select id="aiModel">
-        <option value="claude-sonnet-4-6">Sonnet 4.6 (robust, empfohlen)</option>
-        <option value="claude-haiku-4-5-20251001">Haiku 4.5 (schnell/günstig)</option>
-        <option value="claude-opus-4-8">Opus 4.8 (maximal)</option></select></div>
-    </div>
+    <h2>📄 Angebote automatisch einlesen (optional, 100 % lokal)</h2>
+    <p class="note">Lege je Variante ein Angebot (PDF oder Bild) in die Ablage-Zone der Karte – die Felder werden automatisch ausgefüllt. Die Auswertung läuft <b>vollständig lokal in deinem Browser</b>; es wird nichts hochgeladen oder an einen Server gesendet, und es entstehen keine Kosten. (Beim ersten Mal wird die lokale PDF-/OCR-Bibliothek einmalig geladen.) Bitte die übernommenen Werte kurz mit dem Angebot abgleichen – sehr ungewöhnliche Layouts erkennt der Muster-Parser evtl. nicht vollständig; fehlende Felder einfach manuell ergänzen.</p>
   </div>
 
   <!-- Varianten -->
@@ -457,13 +450,7 @@ document.addEventListener("input",render);
 document.addEventListener("change",render);
 render();
 
-/* ---------- Angebots-Import: lokale Extraktion → Schwärzung → Claude ---------- */
-(function(){
-  const k=localStorage.getItem('anthropicKey'); if(k)$("aiKey").value=k;
-  const m=localStorage.getItem('aiModel'); if(m)$("aiModel").value=m;
-  $("aiKey").addEventListener('change',e=>localStorage.setItem('anthropicKey',e.target.value.trim()));
-  $("aiModel").addEventListener('change',e=>localStorage.setItem('aiModel',e.target.value));
-})();
+/* ---------- Angebots-Import: 100% lokal (Text-Extraktion + Muster-Parser, keine API) ---------- */
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Bibliothek nicht ladbar (Internet?)'));document.head.appendChild(s);});}
 async function ensurePdf(){ if(window.pdfjsLib) return window.pdfjsLib;
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
@@ -495,16 +482,59 @@ function redact(t){ return String(t)
   .replace(/(?:\+49|0)[\d \/().\-]{6,}\d/g,'[TEL]')
   .replace(/\b(?:Herr|Frau|Hr\.|Fr\.)\s+[A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)?/g,'[NAME]')
   .replace(/\b(Kundennummer|Kunden-?Nr\.?|Darlehensnummer|Vertragsnummer|Konto(?:nummer)?)\s*[:\s]*[\w\/-]+/gi,'$1 [NR]'); }
-async function callClaude(text,setStatus){
-  const key=($("aiKey").value||'').trim(); if(!key) throw new Error('Bitte oben den Anthropic API-Key eintragen.');
-  setStatus('Claude wertet aus…');
-  const prompt='Extrahiere die Finanzierungs-Eckdaten aus diesem Bank-Finanzierungsangebot. Antworte AUSSCHLIESSLICH mit EINEM JSON-Objekt (keine Erklärung) mit den Schlüsseln: name (Bank/Produkt, string), darlehen (Nettodarlehensbetrag in EUR, Zahl), sollzins (gebundener Sollzinssatz %, Zahl), tilgung (anfänglicher Tilgungssatz %, Zahl; falls nur die monatliche Rate genannt ist: tilgung = Rate*12/darlehen*100 - sollzins), zinsbindung (Sollzinsbindung in Jahren, Zahl), anschlusszins (% oder null), sondertilgung (jährliche Sondertilgung EUR, sonst 0), disagio (% oder 0), gebuehr (einmalige Gebühren EUR, sonst 0), effektivzins (% oder null), monatsrate (EUR oder null). Zahlen mit Punkt als Dezimaltrennzeichen, ohne Tausenderpunkte und ohne Einheiten. Unbekannt = null.\n\nTEXT:\n'+text.slice(0,9000);
-  const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
-    headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:$("aiModel").value,max_tokens:700,messages:[{role:'user',content:prompt}]})});
-  if(!res.ok){ throw new Error('API '+res.status+': '+(await res.text()).slice(0,160)); }
-  const j=await res.json(); const out=(j.content&&j.content[0]&&j.content[0].text)||'';
-  const mm=out.match(/\{[\s\S]*\}/); if(!mm) throw new Error('Keine Daten erkannt.'); return JSON.parse(mm[0]);
+function parseDe(s){
+  if(s==null) return null; s=(''+s).replace(/[^\d.,]/g,'');
+  if(!s) return null;
+  if(s.indexOf(',')>=0){ s=s.replace(/\./g,'').replace(',','.'); }
+  else { const p=s.split('.'); if(p.length>1 && p[p.length-1].length===3) s=p.join(''); }
+  const v=parseFloat(s); return isNaN(v)?null:v;
+}
+function findNum(t,res){ for(const re of res){ const m=t.match(re); if(m&&m[1]!=null){ const v=parseDe(m[1]); if(v!=null) return {v,mon:/Monat/i.test(m[0])}; } } return null; }
+function parseOffer(t){
+  t=String(t).replace(/\s+/g,' ');
+  const num=(res)=>{ const r=findNum(t,res); return r?r.v:null; };
+  const d={};
+  d.darlehen=num([
+    /Nettodarlehensbetrag[^0-9]{0,30}([\d.][\d.,]*)\s*(?:EUR|€)/i,
+    /Darlehensbetrag[^0-9]{0,30}([\d.][\d.,]*)\s*(?:EUR|€)/i,
+    /Darlehenssumme[^0-9]{0,30}([\d.][\d.,]*)\s*(?:EUR|€)/i,
+    /Finanzierungsbetrag[^0-9]{0,30}([\d.][\d.,]*)\s*(?:EUR|€)/i,
+    /(?:Nennbetrag|Darlehen)[^0-9]{0,22}([\d.][\d.,]*)\s*(?:EUR|€)/i
+  ]);
+  d.sollzins=num([
+    /gebundener\s+Sollzins(?:satz)?[^0-9]{0,30}(\d{1,2}(?:,\d+)?)\s*%/i,
+    /Sollzins(?:satz)?[^0-9]{0,30}(\d{1,2}(?:,\d+)?)\s*%/i,
+    /Nominalzins(?:satz)?[^0-9]{0,30}(\d{1,2}(?:,\d+)?)\s*%/i
+  ]);
+  d.tilgung=num([
+    /anf[äa][^%]{0,16}Tilgung[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*%/i,
+    /Tilgungssatz[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*%/i,
+    /(?<!Sonder)Tilgung[^0-9%]{0,18}(\d{1,2}(?:,\d+)?)\s*%/i
+  ]);
+  const zb=findNum(t,[
+    /Sollzinsbindung[^0-9]{0,30}(\d{1,3})\s*(?:Jahre?|J\b|Monate?|Mon)/i,
+    /Zinsbindung(?:sfrist|sdauer)?[^0-9]{0,30}(\d{1,3})\s*(?:Jahre?|J\b|Monate?|Mon)/i,
+    /Zinsfestschreibung[^0-9]{0,30}(\d{1,3})\s*(?:Jahre?|J\b|Monate?|Mon)/i
+  ]);
+  if(zb) d.zinsbindung = zb.mon ? Math.round(zb.v/12) : zb.v;
+  d.monatsrate=num([
+    /monatlich[a-z]*\s+Rate[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i,
+    /Monatsrate[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i,
+    /Annuit[äa]t[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i,
+    /\bRate[^0-9]{0,14}([\d.][\d.,]*)\s*(?:EUR|€)/i
+  ]);
+  d.disagio=num([ /Disagio[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*%/i, /Damnum[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*%/i ]);
+  d.gebuehr=num([
+    /Bearbeitungsgeb[üu]hr[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i,
+    /Bearbeitungsentgelt[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i,
+    /Sch[äa]tzkosten[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i
+  ]);
+  const stE=findNum(t,[ /Sondertilgung[^0-9]{0,30}([\d.][\d.,]*)\s*(?:EUR|€)/i ]);
+  const stP=findNum(t,[ /Sondertilgung[^0-9%]{0,30}(\d{1,2}(?:,\d+)?)\s*%/i ]);
+  if(stE) d.sondertilgung=stE.v; else if(stP && d.darlehen) d.sondertilgung=Math.round(d.darlehen*stP.v/100);
+  const bn=t.match(/([A-ZÄÖÜ][A-Za-zÄÖÜäöüß.\-& ]{2,38}?(?:Sparkasse|Volksbank|Raiffeisenbank|Bausparkasse|Hypothekenbank|Kreditbank|Bank|AG|eG))\b/);
+  if(bn) d.name=bn[1].trim().replace(/\s+/g,' ');
+  return d;
 }
 function fillVariant(n,d){
   const set=(s,v)=>{ if(v!==null&&v!==undefined&&v!==''&&!isNaN(v)) $("v"+n+"_"+s).value=v; };
@@ -518,8 +548,16 @@ function fillVariant(n,d){
 async function processFile(n,file){
   const dz=$("v"+n+"_drop"), st=$("v"+n+"_status"); const setStatus=s=>st.textContent=s;
   dz.classList.remove('ok','err'); dz.classList.add('busy');
-  try{ const data=await callClaude(redact(await fileToText(file,setStatus)),setStatus);
-    fillVariant(n,data); dz.classList.remove('busy'); dz.classList.add('ok'); setStatus('✓ übernommen – bitte Werte prüfen');
+  try{
+    setStatus('wird gelesen…');
+    const data=parseOffer(redact(await fileToText(file,setStatus)));
+    fillVariant(n,data);
+    dz.classList.remove('busy');
+    const need={darlehen:'Darlehen',sollzins:'Sollzins',tilgung:'Tilgung',zinsbindung:'Zinsbindung'};
+    const fehlt=Object.keys(need).filter(k=>data[k]==null).map(k=>need[k]);
+    if(fehlt.length===0){ dz.classList.add('ok'); setStatus('✓ lokal erkannt – bitte Werte prüfen'); }
+    else if(fehlt.length>=3){ dz.classList.add('err'); setStatus('kaum erkannt – bitte manuell eintragen ('+fehlt.join(', ')+')'); }
+    else { dz.classList.add('ok'); setStatus('teilweise erkannt – bitte ergänzen: '+fehlt.join(', ')); }
   }catch(err){ dz.classList.remove('busy'); dz.classList.add('err'); setStatus('Fehler: '+(err.message||err)); }
 }
 [1,2,3].forEach(n=>{
