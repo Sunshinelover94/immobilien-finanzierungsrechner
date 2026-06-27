@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a2332">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Finanzierungsvergleich – bis zu 3 Varianten</title>
+<style>
+  :root{
+    --navy:#1a2332; --teal:#2d8b8b; --amber:#c0743a; --seafoam:#a8dadc; --cream:#f1faee;
+    --bg:#eef4f4; --card:#fff; --ink:#1b2a33; --muted:#5d7682; --line:#dbe7e6; --accent-soft:#e3f1f0;
+    --good:#2f8f76; --bad:#c0556b; --warn:#b4790f;
+    --v1:#2d8b8b; --v2:#1a2332; --v3:#c0743a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:"Segoe UI",Roboto,Arial,sans-serif; color:var(--ink); line-height:1.5;
+    background:radial-gradient(1200px 500px at 80% -10%,#dfeeed 0%,rgba(223,238,237,0) 60%),var(--bg);
+    -webkit-font-smoothing:antialiased;}
+  header{background:linear-gradient(135deg,#1a2332 0%,#245b63 55%,#2d8b8b 100%); color:var(--cream);
+    padding:24px 26px; position:relative; overflow:hidden;}
+  header::after{content:""; position:absolute; right:-40px; top:-60px; width:220px; height:220px;
+    background:radial-gradient(circle,rgba(168,218,220,.25),rgba(168,218,220,0) 70%); border-radius:50%;}
+  header h1{margin:0; font-size:1.4rem; font-weight:800;}
+  header p{margin:6px 0 0; color:var(--seafoam); font-size:.85rem;}
+  header a.back{color:var(--seafoam); font-size:.8rem; text-decoration:none; position:relative;}
+  .wrap{max-width:1240px; margin:0 auto; padding:22px 18px 50px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(26,35,50,.04),0 14px 30px -18px rgba(26,35,50,.22);}
+  .card h2{margin:0 0 14px; font-size:1.02rem; color:var(--navy); font-weight:700; padding:0 0 8px 12px;
+    border-bottom:2px solid var(--accent-soft); position:relative;}
+  .card h2::before{content:""; position:absolute; left:0; top:1px; bottom:8px; width:4px; border-radius:3px;
+    background:linear-gradient(var(--teal),var(--navy));}
+  .grid{display:grid; gap:14px;}
+  .g3{grid-template-columns:repeat(3,1fr);} .g2{grid-template-columns:1fr 1fr;} .g4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:760px){.g3,.g4{grid-template-columns:1fr 1fr;}}
+  @media(max-width:520px){.g2,.g3,.g4{grid-template-columns:1fr;}}
+  .field{margin-bottom:10px;}
+  label.lab{display:block; font-size:.7rem; color:var(--muted); margin-bottom:3px; text-transform:uppercase; letter-spacing:.03em; font-weight:600;}
+  .il{display:flex; align-items:center; gap:6px;}
+  input[type=number],select,input[type=text]{width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:9px;
+    font-size:.92rem; font-family:inherit; background:#fbfdfd; color:var(--ink); transition:border-color .15s,box-shadow .15s;}
+  input:focus,select:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(45,139,139,.16); background:#fff;}
+  .unit{font-size:.82rem; color:var(--muted); min-width:26px;}
+  .vcards{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  @media(max-width:880px){.vcards{grid-template-columns:1fr;}}
+  .vcard{border-top:5px solid var(--teal);}
+  .vcard.v1{border-top-color:var(--v1);} .vcard.v2{border-top-color:var(--v2);} .vcard.v3{border-top-color:var(--v3);}
+  .vhead{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .vhead input[type=checkbox]{width:auto; accent-color:var(--teal);}
+  .vhead .vname{flex:1;}
+  .vdis{opacity:.45;}
+  .toggle{font-size:.8rem; color:var(--teal); cursor:pointer; user-select:none; font-weight:600; margin-top:4px; display:inline-block;}
+  .tranche{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
+  .ka-only.hide{display:none;}
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  table{width:100%; border-collapse:separate; border-spacing:0; font-size:.85rem;}
+  th,td{padding:8px 10px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{background:var(--accent-soft); color:#1d5e5e; font-size:.72rem; text-transform:uppercase; letter-spacing:.03em;}
+  .best{background:#e2f3ee; font-weight:700; color:var(--good);}
+  tbody tr:hover{background:#f6fbfb;}
+  .metric{color:var(--muted); font-size:.78rem;}
+  svg{width:100%; height:auto; display:block;}
+  .legend{display:flex; gap:16px; flex-wrap:wrap; font-size:.8rem; color:var(--muted); margin-top:8px;}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .sw{width:14px; height:4px; border-radius:2px; display:inline-block;}
+  .charts{display:grid; grid-template-columns:1fr; gap:18px;}
+  .reco{background:linear-gradient(135deg,#1a2332,#2d8b8b); color:#fff; border-radius:14px; padding:16px 18px; font-size:.95rem;}
+  .reco b{font-size:1.05rem;}
+  .note{font-size:.78rem; color:var(--muted); margin-top:8px;}
+  .info-box{background:#e6f3f3; border:1px solid #b9dede; color:#1d5e5e; border-radius:10px; padding:10px 13px; font-size:.82rem; margin-top:10px;}
+  .btnbar{display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;}
+  button.act{background:linear-gradient(135deg,#2d8b8b,#237a7a); color:#fff; border:none; border-radius:10px; padding:10px 16px;
+    font-size:.9rem; font-weight:600; cursor:pointer; box-shadow:0 8px 18px -10px rgba(45,139,139,.7);}
+  button.act.alt{background:linear-gradient(135deg,#1a2332,#2c3e52);}
+  .pos{color:var(--good);} .neg{color:var(--bad);}
+  .disclaimer{font-size:.74rem; color:var(--muted); border-top:1px solid var(--line); margin-top:10px; padding-top:10px;}
+  @media print{ body{background:#fff;} header{background:#1a2332!important; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    .no-print{display:none!important;} .card{break-inside:avoid; box-shadow:none;} .best,thead th{-webkit-print-color-adjust:exact; print-color-adjust:exact;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚖️ Finanzierungsvergleich</h1>
+  <p>Hausverwaltung Kurrle · bis zu 3 Angebote · Cashflow vor/nach Steuern · Vermögen · Effektivzins · IRR &middot; <a class="back" href="index.html">← Übersicht</a></p>
+</header>
+
+<div class="wrap">
+  <!-- Gemeinsame Annahmen -->
+  <div class="card">
+    <h2>Gemeinsame Annahmen (für alle Varianten)</h2>
+    <div class="grid g4">
+      <div class="field"><label class="lab">Nutzung</label>
+        <select id="modus"><option value="ka">Kapitalanlage (vermietet)</option><option value="en">Eigennutzung</option></select></div>
+      <div class="field"><label class="lab">Kaufpreis</label><div class="il"><input type="number" id="kaufpreis" value="300000" step="1000"><span class="unit">€</span></div></div>
+      <div class="field"><label class="lab">Kaufnebenkosten</label><div class="il"><input type="number" id="nebenkosten" value="7" step="0.1"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab">Wertsteigerung p.a.</label><div class="il"><input type="number" id="wertsteigerung" value="2" step="0.1"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab">Betrachtungszeitraum</label><div class="il"><input type="number" id="laufzeit" value="15" min="1" max="40" step="1"><span class="unit">J.</span></div></div>
+      <div class="field ka-only"><label class="lab">Kaltmiete / Monat</label><div class="il"><input type="number" id="miete" value="1000" step="50"><span class="unit">€</span></div></div>
+      <div class="field ka-only"><label class="lab">Mietsteigerung p.a.</label><div class="il"><input type="number" id="mietsteigerung" value="1.5" step="0.1"><span class="unit">%</span></div></div>
+      <div class="field ka-only"><label class="lab">Nicht uml. Kosten / Monat</label><div class="il"><input type="number" id="kosten" value="150" step="10"><span class="unit">€</span></div></div>
+      <div class="field ka-only"><label class="lab">Gebäudeanteil (AfA)</label><div class="il"><input type="number" id="gebanteil" value="80" step="1"><span class="unit">%</span></div></div>
+      <div class="field ka-only"><label class="lab">AfA-Satz</label><div class="il"><input type="number" id="afasatz" value="2" step="0.5"><span class="unit">%</span></div></div>
+      <div class="field ka-only"><label class="lab">Grenzsteuersatz</label><div class="il"><input type="number" id="grenzsteuer" value="42" step="0.5"><span class="unit">%</span></div></div>
+    </div>
+    <div class="grid g4" style="margin-top:4px;">
+      <div class="field"><label class="lab">Zinsänderungs-Stress: Modus</label>
+        <select id="stressMode"><option value="auf">Aufschlag auf Sollzins</option><option value="fix">Fixer Anschlusszins</option></select></div>
+      <div class="field"><label class="lab" id="stressLab">Stresswert</label><div class="il"><input type="number" id="stressWert" value="1.0" step="0.1"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab">Empfehlung nach</label>
+        <select id="basis">
+          <option value="vermoegen">höchstes Vermögen</option>
+          <option value="cfnach">höchster Nachsteuer-Cashflow</option>
+          <option value="abfluss">niedrigster Liquiditäts-Abfluss</option>
+          <option value="irr">höchste Rendite (IRR)</option>
+        </select></div>
+    </div>
+  </div>
+
+  <!-- Varianten -->
+  <div class="vcards" id="varianten"></div>
+
+  <div class="btnbar no-print">
+    <button class="act" onclick="window.print()">🖨️ Drucken / PDF</button>
+    <button class="act alt" onclick="exportCSV()">⬇️ CSV</button>
+  </div>
+
+  <!-- Empfehlung -->
+  <div class="card"><div class="reco" id="reco"></div><div id="breakeven" class="info-box" style="display:none;"></div></div>
+
+  <!-- Vergleichstabelle -->
+  <div class="card">
+    <h2>Vergleichstabelle</h2>
+    <div style="overflow-x:auto;"><table id="vtab"></table></div>
+    <div class="info-box" id="stressbox"></div>
+  </div>
+
+  <!-- Diagramme -->
+  <div class="card">
+    <h2>Diagramme</h2>
+    <div class="charts">
+      <div><div class="metric">Cashflow vor Steuern pro Jahr</div><div id="chartCfVor"></div><div class="legend" id="legCfVor"></div></div>
+      <div><div class="metric">Cashflow nach Steuern pro Jahr</div><div id="chartCfNach"></div></div>
+      <div><div class="metric">Vermögen (kumuliert) = Immobilienwert − Restschuld + kum. Nachsteuer-Cashflow − Eigenkapital</div><div id="chartVerm"></div></div>
+    </div>
+    <p class="disclaimer">Vereinfachte Modellrechnung – keine Steuer-, Rechts- oder Finanzierungsberatung. Effektivzins ist eine Näherung über die Zinsbindung (inkl. Disagio/Gebühren); IRR inkl. Wertzuwachs und fiktivem Verkauf am Ende (ohne Verkaufskosten/Spekulationssteuer). Annahmen vor Verwendung prüfen.</p>
+  </div>
+</div>
+
+<script>
+"use strict";
+const eur=new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR",maximumFractionDigits:0});
+const pct=(v)=>new Intl.NumberFormat("de-DE",{minimumFractionDigits:1,maximumFractionDigits:2}).format(v)+" %";
+const $=(id)=>document.getElementById(id);
+const num=(id)=>{const v=parseFloat(($(id)||{}).value);return isNaN(v)?0:v;};
+const VCOL=["var(--v1)","var(--v2)","var(--v3)"];
+const VHEX=["#2d8b8b","#1a2332","#c0743a"];
+
+/* ---------- Varianten-Karten dynamisch ---------- */
+const VDEF=[
+  {on:true ,name:"Bank A", d:250000, sz:3.5, tg:2.0, zb:10, an:4.5, so:0, di:0, ge:0},
+  {on:true ,name:"Bank B", d:250000, sz:3.3, tg:2.0, zb:15, an:4.5, so:0, di:0, ge:0},
+  {on:false,name:"Bank C", d:250000, sz:3.7, tg:3.0, zb:10, an:4.5, so:0, di:1, ge:0}
+];
+function vcard(i){
+  const v=VDEF[i]; const n=i+1;
+  return `<div class="card vcard v${n}" id="vcard${n}">
+    <div class="vhead">
+      <input type="checkbox" id="v${n}_on" ${v.on?"checked":""}>
+      <input type="text" class="vname" id="v${n}_name" value="${v.name}">
+    </div>
+    <div class="row">
+      <div class="field"><label class="lab">Darlehen</label><div class="il"><input type="number" id="v${n}_d" value="${v.d}" step="1000"><span class="unit">€</span></div></div>
+      <div class="field"><label class="lab">Sollzins p.a.</label><div class="il"><input type="number" id="v${n}_sz" value="${v.sz}" step="0.01"><span class="unit">%</span></div></div>
+    </div>
+    <div class="row">
+      <div class="field"><label class="lab">Anf. Tilgung</label><div class="il"><input type="number" id="v${n}_tg" value="${v.tg}" step="0.1"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab">Zinsbindung</label><div class="il"><input type="number" id="v${n}_zb" value="${v.zb}" step="1"><span class="unit">J.</span></div></div>
+    </div>
+    <div class="row">
+      <div class="field"><label class="lab">Anschlusszins</label><div class="il"><input type="number" id="v${n}_an" value="${v.an}" step="0.1"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab">Sondertilgung p.a.</label><div class="il"><input type="number" id="v${n}_so" value="${v.so}" step="500"><span class="unit">€</span></div></div>
+    </div>
+    <div class="row">
+      <div class="field"><label class="lab">Disagio</label><div class="il"><input type="number" id="v${n}_di" value="${v.di}" step="0.1"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab">Einmal. Gebühr</label><div class="il"><input type="number" id="v${n}_ge" value="${v.ge}" step="50"><span class="unit">€</span></div></div>
+    </div>
+    <span class="toggle" id="v${n}_t2toggle">+ zweite Tranche (z. B. KfW)</span>
+    <div class="tranche" id="v${n}_t2" style="display:none;">
+      <div class="row">
+        <div class="field"><label class="lab">Tranche 2 – Betrag</label><div class="il"><input type="number" id="v${n}_t2d" value="0" step="1000"><span class="unit">€</span></div></div>
+        <div class="field"><label class="lab">Sollzins</label><div class="il"><input type="number" id="v${n}_t2sz" value="2.5" step="0.01"><span class="unit">%</span></div></div>
+      </div>
+      <div class="row">
+        <div class="field"><label class="lab">Tilgung</label><div class="il"><input type="number" id="v${n}_t2tg" value="2.0" step="0.1"><span class="unit">%</span></div></div>
+        <div class="field"><label class="lab">Zinsbindung</label><div class="il"><input type="number" id="v${n}_t2zb" value="10" step="1"><span class="unit">J.</span></div></div>
+      </div>
+      <div class="row">
+        <div class="field"><label class="lab">Anschlusszins</label><div class="il"><input type="number" id="v${n}_t2an" value="4.5" step="0.1"><span class="unit">%</span></div></div>
+        <div class="field"><label class="lab">Sondertilgung p.a.</label><div class="il"><input type="number" id="v${n}_t2so" value="0" step="500"><span class="unit">€</span></div></div>
+      </div>
+    </div>
+  </div>`;
+}
+$("varianten").innerHTML=[0,1,2].map(vcard).join("");
+
+/* ---------- Rechen-Engine ---------- */
+function amortize(betrag,sz,tg,zb,an,so,T){
+  const out=[]; if(betrag<=0){ for(let y=0;y<T;y++) out.push({zins:0,tilg:0,rest:0}); return {jahre:out,rateM:0}; }
+  let rest=betrag; const rateM=betrag*(sz+tg)/100/12; let yZ=0,yT=0;
+  for(let m=1;m<=T*12;m++){
+    const eff=(m<=zb*12)?sz:an;
+    const zM=rest*eff/100/12; let tM=rateM-zM; if(tM<0)tM=0; if(tM>rest)tM=rest;
+    rest-=tM; yZ+=zM; yT+=tM;
+    if(m%12===0){ if(rest>0&&so>0){const s=Math.min(so,rest); rest-=s; yT+=s;} out.push({zins:yZ,tilg:yT,rest:Math.max(0,rest)}); yZ=0;yT=0; }
+  }
+  return {jahre:out,rateM};
+}
+function effZinsAnnual(auszahlung,rateM,nMon,restEnd){
+  if(auszahlung<=0||rateM<=0||nMon<=0) return null;
+  const f=(i)=>{let s=0; for(let m=1;m<=nMon;m++) s+=rateM/Math.pow(1+i,m); s+=restEnd/Math.pow(1+i,nMon); return s-auszahlung;};
+  let lo=1e-7, hi=0.05, flo=f(lo), fhi=f(hi); if(flo*fhi>0) return null;
+  for(let k=0;k<200;k++){const mid=(lo+hi)/2,fm=f(mid); if(flo*fm<=0){hi=mid;}else{lo=mid;flo=fm;}}
+  return (Math.pow(1+(lo+hi)/2,12)-1)*100;
+}
+function irrAnnual(cfs){
+  const f=(r)=>cfs.reduce((s,c,k)=>s+c/Math.pow(1+r,k),0);
+  let lo=-0.95, hi=1.0, flo=f(lo), fhi=f(hi); if(isNaN(flo)||isNaN(fhi)||flo*fhi>0) return null;
+  for(let k=0;k<200;k++){const mid=(lo+hi)/2,fm=f(mid); if(flo*fm<=0){hi=mid;}else{lo=mid;flo=fm;}}
+  return ((lo+hi)/2)*100;
+}
+
+function readShared(){
+  const modus=$("modus").value, ka=(modus==="ka");
+  const kaufpreis=num("kaufpreis");
+  const gesamt=kaufpreis*(1+num("nebenkosten")/100);
+  const T=Math.max(1,Math.round(num("laufzeit")));
+  const gw=num("wertsteigerung")/100;
+  const afaBasis=num("gebanteil")/100*gesamt;
+  const afaJahr=afaBasis*num("afasatz")/100;
+  const effRate=num("grenzsteuer")/100;
+  const miete0=num("miete")*12, gm=num("mietsteigerung")/100, kostenJ=num("kosten")*12;
+  const stressMode=$("stressMode").value, stressWert=num("stressWert");
+  return {ka,kaufpreis,gesamt,T,gw,afaBasis,afaJahr,effRate,miete0,gm,kostenJ,stressMode,stressWert};
+}
+function readVariant(n){
+  const g=(s)=>num("v"+n+"_"+s);
+  const tr=[{betrag:g("d"),sz:g("sz"),tg:g("tg"),zb:g("zb"),an:g("an"),so:g("so")}];
+  if($("v"+n+"_t2").style.display!=="none" && g("t2d")>0)
+    tr.push({betrag:g("t2d"),sz:g("t2sz"),tg:g("t2tg"),zb:g("t2zb"),an:g("t2an"),so:g("t2so")});
+  return {n, on:$("v"+n+"_on").checked, name:($("v"+n+"_name").value||("Variante "+n)),
+    tr, di:g("di"), ge:g("ge"), zb:g("zb"), an:g("an"), sz:g("sz"), tg:g("tg")};
+}
+function computeVariant(S,v){
+  const T=S.T;
+  const am=v.tr.map(t=>amortize(t.betrag,t.sz,t.tg,t.zb,t.an,t.so,T));
+  const darlehen=v.tr.reduce((a,t)=>a+t.betrag,0);
+  const rateStart=am.reduce((a,x)=>a+x.rateM,0);
+  const ek0=S.gesamt-darlehen;
+  const disagio=darlehen*v.di/100, gebuehr=v.ge, upfront=disagio+gebuehr;
+  const rows=[]; let kum=0, cumAfa=0, sumSteuer=0;
+  for(let y=1;y<=T;y++){
+    let zins=0,tilg=0,rest=0; for(const x of am){const j=x.jahre[y-1]; zins+=j.zins; tilg+=j.tilg; rest+=j.rest;}
+    const immo=S.kaufpreis*Math.pow(1+S.gw,y);
+    const up=(y===1?upfront:0);
+    let cfVor,steuer,cfNach,afa=0,erg=0;
+    if(S.ka){
+      const miete=S.miete0*Math.pow(1+S.gm,y-1);
+      afa=Math.min(S.afaJahr,Math.max(0,S.afaBasis-cumAfa)); cumAfa+=afa;
+      cfVor=miete-(zins+tilg)-S.kostenJ-up;
+      erg=miete-zins-afa-S.kostenJ-up;
+      steuer=S.effRate*erg; cfNach=cfVor-steuer;
+    } else {
+      cfVor=-(zins+tilg)-up; steuer=0; cfNach=cfVor;
+    }
+    sumSteuer+=steuer; kum+=cfNach;
+    rows.push({y,zins,tilg,rest,immo,cfVor,cfNach,kum,vermoegen:immo-rest+kum-ek0});
+  }
+  const zbIdx=Math.min(T,Math.max(1,Math.round(v.zb)));
+  const restNachZb=rows[zbIdx-1].rest;
+  const restEnde=rows[T-1].rest;
+  const auszahlung=darlehen-disagio-gebuehr;
+  const eff=effZinsAnnual(auszahlung,rateStart,zbIdx*12,restNachZb);
+  const cfs=[-ek0]; for(let y=1;y<=T;y++){let c=rows[y-1].cfNach; if(y===T)c+=rows[y-1].immo-rows[y-1].rest; cfs.push(c);}
+  const irr=irrAnnual(cfs);
+  // Stress
+  const stressZins=(S.stressMode==="fix")?S.stressWert:(v.sz+S.stressWert);
+  const rateNachZbBase=restNachZb*(v.an+v.tg)/100/12;
+  const rateNachZbStress=restNachZb*(stressZins+v.tg)/100/12;
+  return {v,darlehen,ek0,rateStart,rows,
+    sumCfVor:rows.reduce((a,r)=>a+r.cfVor,0),
+    sumCfNach:rows.reduce((a,r)=>a+r.cfNach,0),
+    kumSteuerersparnis:-sumSteuer, restNachZb, restEnde, eff, irr,
+    vermoegenEnde:rows[T-1].vermoegen, stressZins, rateNachZbBase, rateNachZbStress, T, zbIdx};
+}
+
+/* ---------- Diagramm ---------- */
+function lineChart(hostId, years, series, fmt){
+  const W=720,H=240,padL=66,padR=14,padT=12,padB=26,iW=W-padL-padR,iH=H-padT-padB;
+  if(!series.length){ $(hostId).innerHTML=""; return; }
+  const all=series.flatMap(s=>s.vals);
+  let lo=Math.min(0,...all), hi=Math.max(0,...all); if(hi===lo)hi=lo+1;
+  const n=years.length;
+  const x=(i)=>n<=1?padL+iW/2:padL+iW*i/(n-1);
+  const y=(v)=>padT+iH-(v-lo)/(hi-lo)*iH;
+  let ax="";
+  for(let t=0;t<=4;t++){const val=lo+(hi-lo)*t/4, yy=y(val);
+    ax+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="#eef2f6"/>`;
+    ax+=`<text x="${padL-8}" y="${(yy+3).toFixed(1)}" font-size="9" fill="#6b7280" text-anchor="end">${fmt(val)}</text>`;}
+  const y0=y(0); ax+=`<line x1="${padL}" y1="${y0.toFixed(1)}" x2="${W-padR}" y2="${y0.toFixed(1)}" stroke="#94a3b8" stroke-dasharray="3 3"/>`;
+  const ev=Math.ceil(n/12);
+  years.forEach((yr,i)=>{ if(i%ev===0||i===n-1) ax+=`<text x="${x(i).toFixed(1)}" y="${H-9}" font-size="9" fill="#6b7280" text-anchor="middle">${yr}</text>`; });
+  let lines="";
+  for(const s of series){
+    const pts=s.vals.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    lines+=`<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.4"/>`;
+    lines+=s.vals.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.3" fill="${s.color}"/>`).join("");
+  }
+  $(hostId).innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img">${ax}${lines}</svg>`;
+}
+
+let LAST=null;
+function render(){
+  const S=readShared();
+  document.querySelectorAll(".ka-only").forEach(e=>e.classList.toggle("hide",!S.ka));
+  $("stressLab").textContent=($("stressMode").value==="fix")?"Fixer Anschlusszins":"Aufschlag (%-Punkte)";
+  // variant dim styling
+  [1,2,3].forEach(n=>$("vcard"+n).classList.toggle("vdis",!$("v"+n+"_on").checked));
+
+  const variants=[1,2,3].map(readVariant).filter(v=>v.on);
+  const res=variants.map(v=>computeVariant(S,v));
+  LAST={S,res};
+  if(!res.length){ $("vtab").innerHTML="<tr><td>Keine aktive Variante – bitte oben mindestens eine Variante aktivieren.</td></tr>"; $("reco").textContent=""; ["chartCfVor","chartCfNach","chartVerm"].forEach(c=>$(c).innerHTML=""); $("stressbox").innerHTML=""; $("breakeven").style.display="none"; return; }
+
+  // Tabelle
+  const cols=res.map((r,i)=>`<th style="color:${VHEX[variants[i].n-1]}">${r.v.name}</th>`).join("");
+  const fmtRow=(label,vals,better,fmtFn)=>{
+    const nums=vals.map(x=>(x==null?null:x));
+    let bestIdx=-1; const valid=nums.map((x,i)=>({x,i})).filter(o=>o.x!=null);
+    if(valid.length){ bestIdx=(better==="hi"?valid.reduce((a,b)=>b.x>a.x?b:a):valid.reduce((a,b)=>b.x<a.x?b:a)).i; }
+    const tds=nums.map((x,i)=>`<td class="${i===bestIdx?'best':''}">${x==null?"–":fmtFn(x)}</td>`).join("");
+    return `<tr><td class="metric">${label}</td>${tds}</tr>`;
+  };
+  const eK=(x)=>eur.format(x); const eP=(x)=>pct(x);
+  let body="";
+  body+=fmtRow("Darlehen gesamt",res.map(r=>r.darlehen),"lo",eK);
+  body+=fmtRow("Eingesetztes Eigenkapital",res.map(r=>r.ek0),null,eK);
+  body+=fmtRow("Monatsrate (Start)",res.map(r=>r.rateStart),"lo",eK);
+  body+=fmtRow("Effektivzins (Näherung)",res.map(r=>r.eff),"lo",eP);
+  body+=fmtRow("Restschuld n. Zinsbindung",res.map(r=>r.restNachZb),"lo",eK);
+  body+=fmtRow("Restschuld am Ende ("+S.T+" J.)",res.map(r=>r.restEnde),"lo",eK);
+  if(S.ka){
+    body+=fmtRow("Σ Cashflow vor Steuern",res.map(r=>r.sumCfVor),"hi",eK);
+    body+=fmtRow("Σ Cashflow nach Steuern",res.map(r=>r.sumCfNach),"hi",eK);
+    body+=fmtRow("kum. Steuerersparnis",res.map(r=>r.kumSteuerersparnis),"hi",eK);
+  } else {
+    body+=fmtRow("Σ Liquiditäts-Abfluss",res.map(r=>r.sumCfVor),"hi",eK);
+  }
+  body+=fmtRow("IRR (Eigenkapitalrendite)",res.map(r=>r.irr),"hi",eP);
+  body+=fmtRow("Vermögen am Ende",res.map(r=>r.vermoegenEnde),"hi",eK);
+  $("vtab").innerHTML=`<thead><tr><th>Kennzahl</th>${cols}</tr></thead><tbody>${body}</tbody>`;
+
+  // Stress-Box
+  const stressTxt=res.map((r,i)=>`<b style="color:${VHEX[variants[i].n-1]}">${r.v.name}</b>: Rate n. Zinsbindung Basis ${eur.format(r.rateNachZbBase)} → Stress (${($("stressMode").value==="fix")?"fix "+pct(r.stressZins):"+"+pct(S.stressWert)}) ${eur.format(r.rateNachZbStress)}`).join(" &nbsp;·&nbsp; ");
+  $("stressbox").innerHTML="⚠️ <b>Zinsänderungs-Stress</b> (Rate auf Restschuld bei gleicher Tilgung %): "+stressTxt;
+
+  // Charts
+  const years=res[0].rows.map(r=>r.y);
+  const mk=(key)=>res.map((r,i)=>({name:r.v.name,color:VHEX[variants[i].n-1],vals:r.rows.map(x=>x[key])}));
+  lineChart("chartCfVor",years,mk("cfVor"),eur.format);
+  lineChart("chartCfNach",years,mk(S.ka?"cfNach":"cfVor"),eur.format);
+  lineChart("chartVerm",years,mk("vermoegen"),eur.format);
+  $("legCfVor").innerHTML=res.map((r,i)=>`<span><span class="sw" style="background:${VHEX[variants[i].n-1]}"></span>${r.v.name}</span>`).join("");
+
+  // Empfehlung
+  const basis=$("basis").value;
+  const keyMap={vermoegen:["vermoegenEnde","hi"],cfnach:[S.ka?"sumCfNach":"sumCfVor","hi"],abfluss:["sumCfVor","hi"],irr:["irr","hi"]};
+  const [k,dir]=keyMap[basis];
+  const ranked=res.map((r,i)=>({r,name:r.v.name,val:r[k],col:VHEX[variants[i].n-1]})).filter(o=>o.val!=null)
+    .sort((a,b)=>dir==="hi"?b.val-a.val:a.val-b.val);
+  if(ranked.length){
+    const w=ranked[0];
+    const labelMap={vermoegen:"höchstes Vermögen",cfnach:"höchster Nachsteuer-Cashflow",abfluss:"geringster Abfluss",irr:"beste Rendite"};
+    const fmtV=(basis==="irr")?pct(w.val):eur.format(w.val);
+    let diff="";
+    if(ranked.length>1){ const d=Math.abs(w.val-ranked[1].val); diff=` – Vorsprung ${ (basis==="irr")?pct(d):eur.format(d) } vor „${ranked[1].name}".`; }
+    $("reco").innerHTML=`🏆 Empfehlung (${labelMap[basis]}): <b style="color:${w.col}">${w.name}</b> mit ${fmtV}${diff}`;
+  }
+
+  // Break-even (Vermögen): wann führt welche Variante
+  if(res.length>1){
+    const lead=[]; for(let yi=0; yi<years.length; yi++){
+      let best=0; for(let i=1;i<res.length;i++){ if(res[i].rows[yi].vermoegen>res[best].rows[yi].vermoegen) best=i; }
+      lead.push(best);
+    }
+    const segs=[]; let cur=lead[0], start=years[0];
+    for(let yi=1;yi<lead.length;yi++){ if(lead[yi]!==cur){ segs.push({i:cur,von:start,bis:years[yi-1]}); cur=lead[yi]; start=years[yi]; } }
+    segs.push({i:cur,von:start,bis:years[years.length-1]});
+    if(segs.length>1){
+      $("breakeven").style.display="";
+      $("breakeven").innerHTML="📈 <b>Vermögens-Führung im Zeitverlauf:</b> "+segs.map(s=>`Jahr ${s.von}–${s.bis}: <b style="color:${VHEX[variants[s.i].n-1]}">${res[s.i].v.name}</b>`).join(" → ");
+    } else $("breakeven").style.display="none";
+  } else $("breakeven").style.display="none";
+}
+
+/* ---------- CSV ---------- */
+function exportCSV(){
+  if(!LAST)return; const {S,res}=LAST; const de=(v)=>(v==null?"":(""+v.toFixed(2)).replace(".",","));
+  const head=["Kennzahl",...res.map(r=>r.v.name)];
+  const L=[head.join(";")];
+  const add=(lbl,vals)=>L.push([lbl,...vals.map(de)].join(";"));
+  add("Darlehen",res.map(r=>r.darlehen)); add("Eigenkapital",res.map(r=>r.ek0));
+  add("Monatsrate Start",res.map(r=>r.rateStart)); add("Effektivzins %",res.map(r=>r.eff));
+  add("Restschuld n. Zinsbindung",res.map(r=>r.restNachZb)); add("Restschuld Ende",res.map(r=>r.restEnde));
+  add("Summe CF vor Steuern",res.map(r=>r.sumCfVor)); add("Summe CF nach Steuern",res.map(r=>r.sumCfNach));
+  add("IRR %",res.map(r=>r.irr)); add("Vermoegen Ende",res.map(r=>r.vermoegenEnde));
+  L.push(""); L.push("Jahr;"+res.map(r=>r.v.name+" CF n.St.;"+r.v.name+" Vermoegen").join(";"));
+  for(let y=0;y<S.T;y++){ L.push([y+1,...res.flatMap(r=>[de(r.rows[y].cfNach),de(r.rows[y].vermoegen)])].join(";")); }
+  const blob=new Blob(["﻿"+L.join("\n")],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="Finanzierungsvergleich.csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ---------- Events ---------- */
+[1,2,3].forEach(n=>{
+  $("v"+n+"_t2toggle").addEventListener("click",()=>{ const t=$("v"+n+"_t2"); t.style.display=(t.style.display==="none")?"":"none"; render(); });
+});
+document.addEventListener("input",render);
+document.addEventListener("change",render);
+render();
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(function(){});});}
+</script>
+</body>
+</html>
