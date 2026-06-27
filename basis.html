@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a2332">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Immobilien-Finanzierungs-Rechner</title>
+<style>
+  /* Theme: Ocean Depths (theme-factory) */
+  :root {
+    --navy: #1a2332; --teal: #2d8b8b; --seafoam: #a8dadc; --cream: #f1faee;
+    --bg: #eef4f4; --card: #ffffff; --ink: #1b2a33; --muted: #5d7682;
+    --line: #dbe7e6; --accent: #2d8b8b; --accent-soft: #e3f1f0;
+    --good: #2f8f76; --warn: #b4790f; --bad: #c0556b;
+    --tilgung: #1a2332; --zins: #2d8b8b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; background:
+      radial-gradient(1200px 500px at 80% -10%, #dfeeed 0%, rgba(223,238,237,0) 60%), var(--bg);
+      color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  header { background: linear-gradient(135deg, #1a2332 0%, #245b63 55%, #2d8b8b 100%); color: var(--cream);
+      padding: 26px 30px; box-shadow: 0 6px 24px -12px rgba(26,35,50,.5); position: relative; overflow: hidden; }
+  header::after { content: ""; position: absolute; right: -40px; top: -60px; width: 220px; height: 220px;
+      background: radial-gradient(circle, rgba(168,218,220,.25), rgba(168,218,220,0) 70%); border-radius: 50%; }
+  header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: .2px; }
+  header p { margin: 6px 0 0; opacity: .9; font-size: .85rem; color: var(--seafoam); position: relative; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px; display: grid; grid-template-columns: 360px 1fr; gap: 22px; }
+  @media (max-width: 880px) { .wrap { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px;
+      margin-bottom: 20px; box-shadow: 0 1px 2px rgba(26,35,50,.04), 0 14px 30px -18px rgba(26,35,50,.22); }
+  .card h2 { margin: 0 0 16px; font-size: 1.05rem; color: var(--navy); font-weight: 700;
+      padding: 0 0 8px 14px; border-bottom: 2px solid var(--accent-soft); position: relative; }
+  .card h2::before { content: ""; position: absolute; left: 0; top: 1px; bottom: 8px; width: 4px;
+      border-radius: 3px; background: linear-gradient(var(--teal), var(--navy)); }
+  .field { margin-bottom: 13px; }
+  .field label { display: block; font-size: .72rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .input-line { display: flex; align-items: center; gap: 6px; }
+  input[type="number"], select { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px;
+      font-size: .95rem; font-family: inherit; background: #fbfdfd; color: var(--ink); transition: border-color .15s, box-shadow .15s; }
+  input[type="number"]:focus, select:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(45,139,139,.16); background: #fff; }
+  .unit { font-size: .85rem; color: var(--muted); min-width: 18px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .toggle-row input { width: auto; accent-color: var(--teal); }
+
+  /* Kennzahlen */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+  .kpi { background: var(--accent-soft); border: 1px solid rgba(45,139,139,.14); border-radius: 14px; padding: 14px 16px;
+      transition: transform .16s ease, box-shadow .16s ease; }
+  .kpi:hover { transform: translateY(-3px); box-shadow: 0 12px 26px -14px rgba(26,35,50,.4); }
+  .kpi .lbl { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  .kpi .val { font-size: 1.35rem; font-weight: 800; margin-top: 4px; color: var(--navy); letter-spacing: -.3px; }
+  .kpi.highlight { background: linear-gradient(135deg, #1a2332 0%, #2d8b8b 100%); border: none; }
+  .kpi.highlight .val { color: #fff; }
+  .kpi.highlight .lbl { color: rgba(241,250,238,.82); }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .85rem; }
+  th, td { padding: 7px 8px; text-align: right; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { background: var(--accent-soft); color: #1d5e5e; font-size: .72rem; text-transform: uppercase;
+      letter-spacing: .03em; border-bottom: 2px solid rgba(45,139,139,.3); }
+  tbody tr:hover { background: #f3f9f9; }
+
+  .note { font-size: .78rem; color: var(--muted); margin-top: 10px; }
+  .warn-box { background: #fcf3e0; border: 1px solid #f0d59b; color: var(--warn);
+    border-radius: 10px; padding: 9px 13px; font-size: .85rem; margin-bottom: 12px; }
+  .disclaimer { font-size: .75rem; color: var(--muted); border-top: 1px solid var(--line);
+    margin-top: 8px; padding-top: 10px; }
+  button.print { background: linear-gradient(135deg, #2d8b8b, #237a7a); color: #fff; border: none; border-radius: 10px;
+    padding: 11px 18px; font-size: .9rem; font-weight: 600; cursor: pointer; font-family: inherit;
+    box-shadow: 0 8px 18px -10px rgba(45,139,139,.7); transition: transform .15s, filter .15s; }
+  button.print:hover { transform: translateY(-2px); filter: brightness(1.05); }
+  svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; gap: 16px; font-size: .8rem; margin-top: 10px; color: var(--muted); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  @media print {
+    body { background: #fff; }
+    header { background: #1a2332 !important; color: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .wrap { display: block; max-width: 100%; }
+    .no-print { display: none !important; }
+    .card { break-inside: avoid; border: 1px solid #bbb; box-shadow: none; }
+    .kpi, thead th, .kpi.highlight, button.print { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Immobilien-Finanzierungs-Rechner</h1>
+  <p>Hausverwaltung Kurrle &middot; Kaufnebenkosten, Annuität, Tilgungsplan, LTV &amp; Rendite</p>
+</header>
+
+<div class="wrap">
+  <!-- ============ EINGABEN ============ -->
+  <div class="inputs">
+    <div class="card">
+      <h2>1 &middot; Erwerbskosten</h2>
+      <div class="field">
+        <label for="kaufpreis">Kaufpreis</label>
+        <div class="input-line"><input type="number" id="kaufpreis" value="300000" min="0" step="1000"><span class="unit">€</span></div>
+      </div>
+      <div class="field">
+        <label for="bundesland">Bundesland (setzt Grunderwerbsteuer)</label>
+        <select id="bundesland"></select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="grest">Grunderwerbsteuer</label>
+          <div class="input-line"><input type="number" id="grest" value="5.0" min="0" step="0.1"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label for="notar">Notar &amp; Grundbuch</label>
+          <div class="input-line"><input type="number" id="notar" value="2.0" min="0" step="0.1"><span class="unit">%</span></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="makler">Maklercourtage (optional)</label>
+        <div class="input-line"><input type="number" id="makler" value="3.57" min="0" step="0.01"><span class="unit">%</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2 &middot; Finanzierung</h2>
+      <div class="field">
+        <label for="eigenkapital">Eigenkapital (inkl. Nebenkosten-Anteil)</label>
+        <div class="input-line"><input type="number" id="eigenkapital" value="71000" min="0" step="1000"><span class="unit">€</span></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="sollzins">Sollzins p.a.</label>
+          <div class="input-line"><input type="number" id="sollzins" value="3.5" min="0" step="0.01"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label for="tilgung">Anf. Tilgung p.a.</label>
+          <div class="input-line"><input type="number" id="tilgung" value="2.0" min="0" step="0.1"><span class="unit">%</span></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="zinsbindung">Zinsbindung</label>
+          <div class="input-line"><input type="number" id="zinsbindung" value="10" min="1" max="40" step="1"><span class="unit">J.</span></div>
+        </div>
+        <div class="field">
+          <label for="sondertilgung">Sondertilgung p.a.</label>
+          <div class="input-line"><input type="number" id="sondertilgung" value="0" min="0" step="500"><span class="unit">€</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3 &middot; Kapitalanlage (optional)</h2>
+      <div class="toggle-row">
+        <input type="checkbox" id="anlageAktiv">
+        <label for="anlageAktiv" style="margin:0; color:var(--ink); font-size:.9rem;">Als Kapitalanlage rechnen</label>
+      </div>
+      <div id="anlageFelder" style="display:none;">
+        <div class="field">
+          <label for="kaltmiete">Kaltmiete / Monat</label>
+          <div class="input-line"><input type="number" id="kaltmiete" value="1000" min="0" step="50"><span class="unit">€</span></div>
+        </div>
+        <div class="field">
+          <label for="kosten">Nicht umlagefähige Kosten / Monat (Verwaltung, Instandhaltung)</label>
+          <div class="input-line"><input type="number" id="kosten" value="150" min="0" step="10"><span class="unit">€</span></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="print no-print" onclick="window.print()">🖨️ Drucken / als PDF speichern</button>
+  </div>
+
+  <!-- ============ ERGEBNISSE ============ -->
+  <div class="results">
+    <div id="warnung"></div>
+
+    <div class="card">
+      <h2>Kennzahlen auf einen Blick</h2>
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="note" id="kostenDetail"></div>
+    </div>
+
+    <div class="card" id="anlageCard" style="display:none;">
+      <h2>Kapitalanlage</h2>
+      <div class="kpi-grid" id="anlageKpi"></div>
+    </div>
+
+    <div class="card">
+      <h2>Tilgungsverlauf</h2>
+      <div id="chart"></div>
+      <div class="legend">
+        <span><span class="swatch" style="background:var(--tilgung)"></span>Restschuld</span>
+        <span><span class="swatch" style="background:var(--zins)"></span>Zinsanteil p.a.</span>
+        <span><span class="swatch" style="background:#a8dadc"></span>Tilgungsanteil p.a.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tilgungsplan (jährlich)</h2>
+      <table>
+        <thead>
+          <tr><th>Jahr</th><th>Rate p.a.</th><th>Zinsanteil</th><th>Tilgungsanteil</th><th>Sondertilg.</th><th>Restschuld</th></tr>
+        </thead>
+        <tbody id="planBody"></tbody>
+      </table>
+      <p class="disclaimer">
+        Reines Kalkulationswerkzeug – <strong>keine Finanzierungs- oder Steuerberatung</strong>.
+        Effektivzins, Disagio und Bereitstellungszinsen sind nicht berücksichtigt.
+        Grunderwerbsteuer-Sätze bitte vor Verwendung gegen den aktuellen Stand prüfen (Feld ist editierbar).
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* Grunderwerbsteuer-Sätze je Bundesland (Stand prüfen – bei Bedarf anpassen).
+   Die Werte sind nur Defaults; das %-Feld bleibt frei editierbar. */
+const GREST = {
+  "Baden-Württemberg": 5.0,
+  "Bayern": 3.5,
+  "Berlin": 6.0,
+  "Brandenburg": 6.5,
+  "Bremen": 5.0,
+  "Hamburg": 5.5,
+  "Hessen": 6.0,
+  "Mecklenburg-Vorpommern": 6.0,
+  "Niedersachsen": 5.0,
+  "Nordrhein-Westfalen": 6.5,
+  "Rheinland-Pfalz": 5.0,
+  "Saarland": 6.5,
+  "Sachsen": 5.5,
+  "Sachsen-Anhalt": 5.0,
+  "Schleswig-Holstein": 6.5,
+  "Thüringen": 5.0
+};
+
+const eur = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
+const eur0 = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+const pct = (v) => new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 2 }).format(v) + " %";
+
+const $ = (id) => document.getElementById(id);
+const num = (id) => { const v = parseFloat($(id).value); return isNaN(v) ? 0 : v; };
+
+/* ---------- Bundesland-Dropdown füllen ---------- */
+(function initBundesland() {
+  const sel = $("bundesland");
+  for (const name of Object.keys(GREST)) {
+    const o = document.createElement("option");
+    o.value = name; o.textContent = name;
+    sel.appendChild(o);
+  }
+  sel.value = "Baden-Württemberg";
+})();
+
+/* ---------- Reine Berechnungsfunktionen ---------- */
+
+function berechneNebenkosten() {
+  const kaufpreis = num("kaufpreis");
+  const grest = kaufpreis * num("grest") / 100;
+  const notar = kaufpreis * num("notar") / 100;
+  const makler = kaufpreis * num("makler") / 100;
+  const nebenkosten = grest + notar + makler;
+  return { kaufpreis, grest, notar, makler, nebenkosten, gesamt: kaufpreis + nebenkosten };
+}
+
+/* Monatsschleife; jährlich aggregiert. Annuität = Darlehen × (Sollzins + Tilgung).
+   Sondertilgung wird am Ende jedes vollen Jahres verrechnet. Begrenzung 60 Jahre. */
+function berechneTilgungsplan(darlehen, sollzinsP, tilgungP, sondertilgung) {
+  const zinsMonat = sollzinsP / 100 / 12;
+  const annuitaet = darlehen * (sollzinsP + tilgungP) / 100; // jährlich
+  const rateMonat = annuitaet / 12;
+
+  const jahre = [];
+  let restschuld = darlehen;
+  const maxMonate = 60 * 12;
+  let m = 0;
+
+  if (rateMonat <= darlehen * zinsMonat || rateMonat <= 0) {
+    // Rate deckt die Zinsen nicht -> keine Tilgung möglich
+    return { jahre, annuitaet, rateMonat, getilgt: false, restschuld };
+  }
+
+  let jahrZins = 0, jahrTilgung = 0, jahrSonder = 0;
+
+  while (restschuld > 0.005 && m < maxMonate) {
+    const zins = restschuld * zinsMonat;
+    let tilgung = rateMonat - zins;
+    if (tilgung > restschuld) tilgung = restschuld;
+    restschuld -= tilgung;
+    jahrZins += zins;
+    jahrTilgung += tilgung;
+    m++;
+
+    if (m % 12 === 0 || restschuld <= 0.005) {
+      // Sondertilgung am Jahresende
+      if (restschuld > 0.005 && sondertilgung > 0) {
+        const s = Math.min(sondertilgung, restschuld);
+        restschuld -= s;
+        jahrSonder += s;
+      }
+      jahre.push({
+        jahr: Math.ceil(m / 12),
+        rate: jahrZins + jahrTilgung,
+        zins: jahrZins,
+        tilgung: jahrTilgung,
+        sonder: jahrSonder,
+        restschuld: Math.max(0, restschuld)
+      });
+      jahrZins = 0; jahrTilgung = 0; jahrSonder = 0;
+    }
+  }
+  return { jahre, annuitaet, rateMonat, getilgt: restschuld <= 0.005, restschuld: Math.max(0, restschuld) };
+}
+
+function berechneKennzahlen() {
+  const nk = berechneNebenkosten();
+  const eigenkapital = num("eigenkapital");
+  const darlehen = Math.max(0, nk.gesamt - eigenkapital);
+  const sollzinsP = num("sollzins");
+  const tilgungP = num("tilgung");
+  const zinsbindung = Math.round(num("zinsbindung"));
+  const sondertilgung = num("sondertilgung");
+
+  const plan = berechneTilgungsplan(darlehen, sollzinsP, tilgungP, sondertilgung);
+
+  // Restschuld + kumulierte Zinsen am Ende der Zinsbindung
+  let restNachBindung = darlehen;
+  let zinsenBindung = 0;
+  for (const j of plan.jahre) {
+    if (j.jahr <= zinsbindung) {
+      zinsenBindung += j.zins;
+      restNachBindung = j.restschuld;
+    }
+  }
+  if (plan.getilgt && plan.jahre.length && plan.jahre[plan.jahre.length - 1].jahr <= zinsbindung) {
+    restNachBindung = 0;
+  }
+
+  const ltv = nk.kaufpreis > 0 ? darlehen / nk.kaufpreis * 100 : 0;
+  const laufzeit = plan.getilgt ? plan.jahre.length : null;
+
+  return { nk, eigenkapital, darlehen, sollzinsP, tilgungP, zinsbindung, sondertilgung,
+           plan, rateMonat: plan.rateMonat, ltv, restNachBindung, zinsenBindung, laufzeit };
+}
+
+/* ---------- Darstellung ---------- */
+
+function kpi(lbl, val, highlight) {
+  return `<div class="kpi${highlight ? " highlight" : ""}"><div class="lbl">${lbl}</div><div class="val">${val}</div></div>`;
+}
+
+function render() {
+  const k = berechneKennzahlen();
+
+  // Warnungen
+  const w = $("warnung");
+  const warnungen = [];
+  if (!k.plan.getilgt && k.darlehen > 0) {
+    warnungen.push("Die monatliche Rate deckt die Zinsen nicht – mit dieser Tilgung erfolgt keine Rückzahlung. Bitte Tilgung erhöhen.");
+  }
+  if (k.darlehen <= 0) {
+    warnungen.push("Eigenkapital deckt die Gesamtinvestition vollständig – kein Darlehen erforderlich.");
+  }
+  if (k.tilgungP === 0 && k.darlehen > 0) {
+    warnungen.push("Anfängliche Tilgung ist 0 % – ohne Tilgung läuft das Darlehen endlos.");
+  }
+  w.innerHTML = warnungen.length ? warnungen.map(t => `<div class="warn-box">⚠️ ${t}</div>`).join("") : "";
+
+  // Kennzahlen
+  $("kpiGrid").innerHTML =
+    kpi("Gesamtinvestition", eur0.format(k.nk.gesamt)) +
+    kpi("Darlehensbetrag", eur0.format(k.darlehen)) +
+    kpi("Monatliche Rate", eur.format(k.rateMonat), true) +
+    kpi("Beleihungsauslauf (LTV)", pct(k.ltv)) +
+    kpi("Restschuld n. Zinsbindung", eur0.format(k.restNachBindung)) +
+    kpi("Zinsen in Zinsbindung", eur0.format(k.zinsenBindung)) +
+    kpi("Laufzeit b. Volltilgung", k.laufzeit ? k.laufzeit + " Jahre" : "—");
+
+  $("kostenDetail").innerHTML =
+    `Kaufnebenkosten: <strong>${eur0.format(k.nk.nebenkosten)}</strong> ` +
+    `(Grunderwerbst. ${eur0.format(k.nk.grest)} · Notar/Grundbuch ${eur0.format(k.nk.notar)} · Makler ${eur0.format(k.nk.makler)})`;
+
+  // Kapitalanlage
+  const anlageAn = $("anlageAktiv").checked;
+  $("anlageCard").style.display = anlageAn ? "" : "none";
+  if (anlageAn) {
+    const miete = num("kaltmiete");
+    const kosten = num("kosten");
+    const jahresmiete = miete * 12;
+    const bruttorendite = k.nk.kaufpreis > 0 ? jahresmiete / k.nk.kaufpreis * 100 : 0;
+    const cashflow = miete - k.rateMonat - kosten;
+    const nettomieteJahr = (miete - kosten) * 12;
+    const kapitaldienst = k.rateMonat * 12;
+    const dscr = kapitaldienst > 0 ? nettomieteJahr / kapitaldienst : 0;
+    $("anlageKpi").innerHTML =
+      kpi("Bruttomietrendite", pct(bruttorendite)) +
+      kpi("Cashflow / Monat (vor St.)", eur.format(cashflow), true) +
+      kpi("DSCR", dscr ? new Intl.NumberFormat("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}).format(dscr) : "—");
+  }
+
+  // Tabelle
+  $("planBody").innerHTML = k.plan.jahre.map(j =>
+    `<tr><td>${j.jahr}</td><td>${eur0.format(j.rate)}</td><td>${eur0.format(j.zins)}</td>` +
+    `<td>${eur0.format(j.tilgung)}</td><td>${j.sonder ? eur0.format(j.sonder) : "–"}</td>` +
+    `<td>${eur0.format(j.restschuld)}</td></tr>`
+  ).join("") || `<tr><td colspan="6" style="text-align:center;color:var(--muted)">Keine Tilgung berechenbar</td></tr>`;
+
+  zeichneChart(k.plan.jahre, k.darlehen);
+}
+
+/* Inline-SVG-Diagramm: Restschuld als Linie + gestapelte Zins/Tilgung-Balken */
+function zeichneChart(jahre, darlehen) {
+  const W = 680, H = 260, padL = 60, padR = 16, padT = 16, padB = 28;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+  const chart = $("chart");
+  if (!jahre.length) { chart.innerHTML = `<p class="note">Kein Verlauf darstellbar.</p>`; return; }
+
+  const maxRest = darlehen || 1;
+  const maxRate = Math.max(...jahre.map(j => j.zins + j.tilgung), 1);
+  const n = jahre.length;
+  const bw = Math.max(2, innerW / n * 0.6);
+  const step = innerW / n;
+
+  const x = (i) => padL + step * i + step / 2;
+  const yRest = (v) => padT + innerH - (v / maxRest) * innerH;
+  const hRate = (v) => (v / maxRate) * innerH;
+
+  let bars = "";
+  jahre.forEach((j, i) => {
+    const cx = x(i) - bw / 2;
+    const hZ = hRate(j.zins), hT = hRate(j.tilgung);
+    const yT = padT + innerH - hT;
+    const yZ = yT - hZ;
+    bars += `<rect x="${cx.toFixed(1)}" y="${yT.toFixed(1)}" width="${bw.toFixed(1)}" height="${hT.toFixed(1)}" fill="#a8dadc"/>`;
+    bars += `<rect x="${cx.toFixed(1)}" y="${yZ.toFixed(1)}" width="${bw.toFixed(1)}" height="${hZ.toFixed(1)}" fill="var(--zins)"/>`;
+  });
+
+  // Restschuld-Linie (Start = volles Darlehen)
+  let pts = `${padL},${yRest(darlehen).toFixed(1)} `;
+  jahre.forEach((j, i) => { pts += `${x(i).toFixed(1)},${yRest(j.restschuld).toFixed(1)} `; });
+  const line = `<polyline points="${pts.trim()}" fill="none" stroke="var(--tilgung)" stroke-width="2.5"/>`;
+
+  // Achsen + Beschriftung
+  let axis = `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+innerH}" stroke="#cbd5e1"/>` +
+             `<line x1="${padL}" y1="${padT+innerH}" x2="${W-padR}" y2="${padT+innerH}" stroke="#cbd5e1"/>`;
+  for (let t = 0; t <= 4; t++) {
+    const val = maxRest * t / 4;
+    const yy = yRest(val);
+    axis += `<line x1="${padL-4}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="#eef2f6"/>`;
+    axis += `<text x="${padL-8}" y="${(yy+3).toFixed(1)}" font-size="9" fill="#6b7280" text-anchor="end">${eur0.format(val)}</text>`;
+  }
+  const labelEvery = Math.ceil(n / 12);
+  jahre.forEach((j, i) => {
+    if (i % labelEvery === 0 || i === n - 1) {
+      axis += `<text x="${x(i).toFixed(1)}" y="${H-10}" font-size="9" fill="#6b7280" text-anchor="middle">${j.jahr}</text>`;
+    }
+  });
+
+  chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tilgungsverlauf">${axis}${bars}${line}</svg>`;
+}
+
+/* ---------- Events ---------- */
+$("bundesland").addEventListener("change", (e) => {
+  const r = GREST[e.target.value];
+  if (r != null) $("grest").value = r;
+  render();
+});
+$("anlageAktiv").addEventListener("change", (e) => {
+  $("anlageFelder").style.display = e.target.checked ? "" : "none";
+  render();
+});
+document.querySelectorAll('input[type="number"]').forEach(el => el.addEventListener("input", render));
+
+render();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(function(){});});}</script>
+</body>
+</html>

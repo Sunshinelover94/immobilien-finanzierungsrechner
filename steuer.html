@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a2332">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Immobilien-Finanzierungs-Rechner mit Steuer, AfA & Verkauf</title>
+<style>
+  /* Theme: Ocean Depths (theme-factory) */
+  :root {
+    --navy: #1a2332; --teal: #2d8b8b; --seafoam: #a8dadc; --cream: #f1faee;
+    --bg: #eef4f4; --card: #ffffff; --ink: #1b2a33; --muted: #5d7682;
+    --line: #dbe7e6; --accent: #2d8b8b; --accent-soft: #e3f1f0;
+    --good: #2f8f76; --warn: #b4790f; --bad: #c0556b;
+    --gut: #2d8b8b; --std: #1a2332; --vor: #9bb6bd;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; background:
+      radial-gradient(1200px 500px at 80% -10%, #dfeeed 0%, rgba(223,238,237,0) 60%), var(--bg);
+      color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  header { background: linear-gradient(135deg, #1a2332 0%, #245b63 55%, #2d8b8b 100%); color: var(--cream);
+      padding: 26px 30px; box-shadow: 0 6px 24px -12px rgba(26,35,50,.5); position: relative; overflow: hidden; }
+  header::after { content: ""; position: absolute; right: -40px; top: -60px; width: 220px; height: 220px;
+      background: radial-gradient(circle, rgba(168,218,220,.25), rgba(168,218,220,0) 70%); border-radius: 50%; }
+  header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: .2px; }
+  header p { margin: 6px 0 0; opacity: .9; font-size: .85rem; color: var(--seafoam); position: relative; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 24px 20px; display: grid; grid-template-columns: 360px 1fr; gap: 22px; }
+  @media (max-width: 920px) { .wrap { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px;
+      margin-bottom: 20px; box-shadow: 0 1px 2px rgba(26,35,50,.04), 0 14px 30px -18px rgba(26,35,50,.22); }
+  .card h2 { margin: 0 0 16px; font-size: 1.05rem; color: var(--navy); font-weight: 700;
+      padding: 0 0 8px 14px; border-bottom: 2px solid var(--accent-soft); position: relative; }
+  .card h2::before { content: ""; position: absolute; left: 0; top: 1px; bottom: 8px; width: 4px;
+      border-radius: 3px; background: linear-gradient(var(--teal), var(--navy)); }
+  .field { margin-bottom: 13px; }
+  .field label { display: block; font-size: .72rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .input-line { display: flex; align-items: center; gap: 6px; }
+  input[type="number"], select { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px;
+      font-size: .95rem; font-family: inherit; background: #fbfdfd; color: var(--ink); transition: border-color .15s, box-shadow .15s; }
+  input:focus, select:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(45,139,139,.16); background: #fff; }
+  .unit { font-size: .85rem; color: var(--muted); min-width: 30px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .toggle-row input { width: auto; accent-color: var(--teal); }
+  .toggle-row label { margin: 0; color: var(--ink); font-size: .9rem; }
+  .hint { font-size: .72rem; color: var(--muted); margin-top: 4px; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+  .kpi { background: var(--accent-soft); border: 1px solid rgba(45,139,139,.14); border-radius: 14px; padding: 14px 16px;
+      transition: transform .16s ease, box-shadow .16s ease; }
+  .kpi:hover { transform: translateY(-3px); box-shadow: 0 12px 26px -14px rgba(26,35,50,.4); }
+  .kpi .lbl { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  .kpi .val { font-size: 1.35rem; font-weight: 800; margin-top: 4px; color: var(--navy); letter-spacing: -.3px; }
+  .kpi .sub { font-size: .72rem; color: var(--muted); margin-top: 3px; }
+  .kpi.highlight { background: linear-gradient(135deg, #1a2332 0%, #2d8b8b 100%); border: none; }
+  .kpi.highlight .val { color: #fff; }
+  .kpi.highlight .lbl, .kpi.highlight .sub { color: rgba(241,250,238,.82); }
+  .kpi.gut { background: #e2f3ee; border-color: rgba(47,143,118,.22); }
+  .kpi.gut .val { color: var(--good); }
+  .pos { color: var(--good); } .neg { color: var(--bad); }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .82rem; }
+  th, td { padding: 7px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { background: var(--accent-soft); color: #1d5e5e; font-size: .7rem; text-transform: uppercase;
+      letter-spacing: .03em; position: sticky; top: 0; border-bottom: 2px solid rgba(45,139,139,.3); }
+  .gutcol { background: #eef8f4; }
+  thead th.gutcol { background: #d6ece4; color: #1f6f57; }
+  .scroll { overflow-x: auto; border-radius: 10px; }
+  tbody tr:hover { background: #f3f9f9; }
+  tfoot td { font-weight: 700; border-top: 2px solid var(--teal); background: #f6fbfb; }
+
+  .note { font-size: .78rem; color: var(--muted); margin-top: 10px; }
+  .info-box { background: #e6f3f3; border: 1px solid #b9dede; color: #1d5e5e; border-radius: 10px; padding: 10px 13px; font-size: .8rem; margin-top: 10px; }
+  .warn-box { background: #fcf3e0; border: 1px solid #f0d59b; color: var(--warn); border-radius: 10px; padding: 9px 13px; font-size: .85rem; margin-bottom: 12px; }
+  .disclaimer { font-size: .75rem; color: var(--muted); border-top: 1px solid var(--line); margin-top: 8px; padding-top: 10px; }
+  .btnbar { display: flex; gap: 10px; flex-wrap: wrap; }
+  button.act { background: linear-gradient(135deg, #2d8b8b, #237a7a); color: #fff; border: none; border-radius: 10px;
+      padding: 11px 18px; font-size: .9rem; font-weight: 600; cursor: pointer; font-family: inherit;
+      box-shadow: 0 8px 18px -10px rgba(45,139,139,.7); transition: transform .15s, box-shadow .15s, filter .15s; }
+  button.act.alt { background: linear-gradient(135deg, #1a2332, #2c3e52); box-shadow: 0 8px 18px -10px rgba(26,35,50,.7); }
+  button.act:hover { transform: translateY(-2px); filter: brightness(1.05); }
+  svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; gap: 16px; font-size: .8rem; margin-top: 10px; flex-wrap: wrap; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  @media print {
+    body { background: #fff; }
+    header { background: #1a2332 !important; color: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .wrap { display: block; max-width: 100%; }
+    .no-print { display: none !important; }
+    .card { break-inside: avoid; border: 1px solid #bbb; box-shadow: none; }
+    .kpi, thead th, .kpi.highlight, .gutcol, button.act { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .scroll { overflow: visible; }
+    table { font-size: .66rem; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Finanzierungs-Rechner mit Steuer, AfA &amp; Verkauf</h1>
+  <p>Hausverwaltung Kurrle &middot; Cashflow vor/nach Steuern &middot; Mietsteigerung &middot; Restnutzungsdauer-Gutachten &middot; Verkaufsszenario mit Spekulationssteuer</p>
+</header>
+
+<div class="wrap">
+  <!-- ============ EINGABEN ============ -->
+  <div class="inputs">
+    <div class="card">
+      <h2>1 &middot; Erwerb &amp; Grundstück</h2>
+      <div class="field">
+        <label for="kaufpreis">Kaufpreis</label>
+        <div class="input-line"><input type="number" id="kaufpreis" value="300000" min="0" step="1000"><span class="unit">€</span></div>
+      </div>
+      <div class="field">
+        <label for="bundesland">Bundesland (Grunderwerbsteuer)</label>
+        <select id="bundesland"></select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="grest">Grunderwerbsteuer</label>
+          <div class="input-line"><input type="number" id="grest" value="5.0" min="0" step="0.1"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label for="notar">Notar &amp; Grundbuch</label>
+          <div class="input-line"><input type="number" id="notar" value="2.0" min="0" step="0.1"><span class="unit">%</span></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="makler">Maklercourtage Kauf (optional)</label>
+        <div class="input-line"><input type="number" id="makler" value="0" min="0" step="0.01"><span class="unit">%</span></div>
+      </div>
+      <div class="field">
+        <label for="bodenMethode">Bodenwert ermitteln über</label>
+        <select id="bodenMethode">
+          <option value="qm">Fläche × Bodenrichtwert</option>
+          <option value="fest">Festbetrag</option>
+        </select>
+      </div>
+      <div class="row2" id="bodenQm">
+        <div class="field">
+          <label for="flaeche">Grundstücksfläche (anteilig)</label>
+          <div class="input-line"><input type="number" id="flaeche" value="250" min="0" step="1"><span class="unit">m²</span></div>
+        </div>
+        <div class="field">
+          <label for="bodenrichtwert">Bodenrichtwert</label>
+          <div class="input-line"><input type="number" id="bodenrichtwert" value="300" min="0" step="10"><span class="unit">€/m²</span></div>
+        </div>
+      </div>
+      <div class="field" id="bodenFest" style="display:none;">
+        <label for="bodenwertFest">Bodenwert (Festbetrag)</label>
+        <div class="input-line"><input type="number" id="bodenwertFest" value="75000" min="0" step="1000"><span class="unit">€</span></div>
+        <div class="hint">Für WEG: anteiliger Bodenwert = Miteigentumsanteil × Gesamt-Bodenwert (lt. Kaufvertrag/Teilungserklärung).</div>
+      </div>
+      <div class="hint">Nur der Gebäudeanteil ist abschreibbar – der Bodenwert wird von der AfA-Basis abgezogen.</div>
+    </div>
+
+    <div class="card">
+      <h2>2 &middot; Finanzierung</h2>
+      <div class="field">
+        <label for="eigenkapital">Eigenkapital</label>
+        <div class="input-line"><input type="number" id="eigenkapital" value="71000" min="0" step="1000"><span class="unit">€</span></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="sollzins">Sollzins p.a.</label>
+          <div class="input-line"><input type="number" id="sollzins" value="3.5" min="0" step="0.01"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label for="tilgung">Anf. Tilgung p.a.</label>
+          <div class="input-line"><input type="number" id="tilgung" value="2.0" min="0" step="0.1"><span class="unit">%</span></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="sondertilgung">Sondertilgung p.a. (optional)</label>
+        <div class="input-line"><input type="number" id="sondertilgung" value="0" min="0" step="500"><span class="unit">€</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3 &middot; Vermietung</h2>
+      <div class="field">
+        <label for="kaltmiete">Kaltmiete / Monat (Start)</label>
+        <div class="input-line"><input type="number" id="kaltmiete" value="1000" min="0" step="50"><span class="unit">€</span></div>
+      </div>
+      <div class="field">
+        <label for="mietsteigerung">Mietsteigerung p.a.</label>
+        <div class="input-line"><input type="number" id="mietsteigerung" value="1.5" min="0" step="0.1"><span class="unit">%</span></div>
+      </div>
+      <div class="field">
+        <label for="kosten">Nicht umlagefähige Kosten / Monat</label>
+        <div class="input-line"><input type="number" id="kosten" value="150" min="0" step="10"><span class="unit">€</span></div>
+        <div class="hint">Verwaltung, Instandhaltung etc. – abziehbare Werbungskosten.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4 &middot; Steuer &amp; AfA</h2>
+      <div class="field">
+        <label for="zeitraum">Betrachtungszeitraum</label>
+        <div class="input-line"><input type="number" id="zeitraum" value="10" min="1" max="50" step="1"><span class="unit">J.</span></div>
+      </div>
+      <div class="field">
+        <label for="grenzsteuer">Persönlicher Grenzsteuersatz</label>
+        <div class="input-line"><input type="number" id="grenzsteuer" value="42" min="0" max="50" step="0.5"><span class="unit">%</span></div>
+      </div>
+      <div class="row2">
+        <div class="toggle-row" style="align-items:flex-start;">
+          <input type="checkbox" id="soli">
+          <label for="soli">Soli (5,5 %)</label>
+        </div>
+        <div class="field">
+          <label for="kirche">Kirchensteuer</label>
+          <div class="input-line"><input type="number" id="kirche" value="0" min="0" max="9" step="1"><span class="unit">%</span></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="afaStd">Standard-Gebäude-AfA (linear)</label>
+        <select id="afaStd">
+          <option value="2">2,0 % – Baujahr ab 1925 (50 J.)</option>
+          <option value="2.5">2,5 % – Baujahr vor 1925 (40 J.)</option>
+          <option value="3">3,0 % – Fertigstellung ab 2023 (33,3 J.)</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <input type="checkbox" id="gutAktiv" checked>
+        <label for="gutAktiv">Restnutzungsdauer-Gutachten simulieren</label>
+      </div>
+      <div class="field" id="rndFeld">
+        <label for="rnd">Restnutzungsdauer lt. Gutachten</label>
+        <div class="input-line"><input type="number" id="rnd" value="25" min="1" max="50" step="1"><span class="unit">J.</span></div>
+        <div class="hint">AfA-Satz = 100 / Restnutzungsdauer (z. B. 25 J. → 4,0 %).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>5 &middot; Verkauf</h2>
+      <div class="toggle-row">
+        <input type="checkbox" id="verkaufAktiv" checked>
+        <label for="verkaufAktiv">Verkaufsszenario rechnen</label>
+      </div>
+      <div id="verkaufFelder">
+        <div class="field">
+          <label for="bewMethode">Bewertungsmethode</label>
+          <select id="bewMethode">
+            <option value="prozent">Wertsteigerung % p.a.</option>
+            <option value="faktor">Verkaufsfaktor (× Jahreskaltmiete)</option>
+          </select>
+        </div>
+        <div class="field" id="feldProzent">
+          <label for="wertsteigerung">Wertsteigerung p.a.</label>
+          <div class="input-line"><input type="number" id="wertsteigerung" value="2.0" min="-10" step="0.1"><span class="unit">%</span></div>
+          <div class="hint">Verkaufspreis = Kaufpreis × (1 + %)^Jahre – entkoppelt vom Mietverlauf.</div>
+        </div>
+        <div class="field" id="feldFaktor" style="display:none;">
+          <label for="verkaufsfaktor">Verkaufsfaktor (Vielfaches der Jahreskaltmiete)</label>
+          <div class="input-line"><input type="number" id="verkaufsfaktor" value="25" min="1" step="0.5"><span class="unit">×</span></div>
+          <div class="hint" id="efHint"></div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="verkaufsjahr">Verkauf im Jahr</label>
+            <div class="input-line"><input type="number" id="verkaufsjahr" value="10" min="1" max="50" step="1"><span class="unit">J.</span></div>
+          </div>
+          <div class="field">
+            <label for="verkaufskosten">Verkaufskosten</label>
+            <div class="input-line"><input type="number" id="verkaufskosten" value="0" min="0" step="0.1"><span class="unit">%</span></div>
+          </div>
+        </div>
+        <div class="hint">Verkaufskosten % vom Verkaufspreis (Makler/Notar/VFE). Gewinn steuerfrei nach mehr als 10 Jahren Haltedauer.</div>
+      </div>
+    </div>
+
+    <div class="btnbar no-print">
+      <button class="act" onclick="window.print()">🖨️ PDF-Report</button>
+      <button class="act alt" onclick="exportCSV()">⬇️ Excel/CSV</button>
+    </div>
+  </div>
+
+  <!-- ============ ERGEBNISSE ============ -->
+  <div class="results">
+    <div id="warnung"></div>
+
+    <div class="card">
+      <h2>Grunddaten &amp; AfA-Basis</h2>
+      <div class="kpi-grid" id="kpiBasis"></div>
+      <div class="note" id="basisDetail"></div>
+    </div>
+
+    <div class="card">
+      <h2>Cashflow Jahr 1</h2>
+      <div class="kpi-grid" id="kpiCf"></div>
+    </div>
+
+    <div class="card" id="vergleichCard">
+      <h2>Vergleich über <span id="zrLabel">10</span> Jahre: Standard-AfA vs. Gutachten</h2>
+      <div class="kpi-grid" id="kpiVergleich"></div>
+    </div>
+
+    <div class="card" id="verkaufCard">
+      <h2>Verkaufsszenario (Verkauf im Jahr <span id="vjLabel">10</span>)</h2>
+      <div class="kpi-grid" id="kpiVerkauf"></div>
+      <div id="spekHinweis"></div>
+    </div>
+
+    <div class="card">
+      <h2>Cashflow-Verlauf nach Steuern</h2>
+      <div id="chart"></div>
+      <div class="legend">
+        <span><span class="swatch" style="background:var(--vor)"></span>CF vor Steuern</span>
+        <span><span class="swatch" style="background:var(--std)"></span>CF nach Steuern (Standard)</span>
+        <span id="legGut"><span class="swatch" style="background:var(--gut)"></span>CF nach Steuern (Gutachten)</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Jahresübersicht</h2>
+      <div class="scroll">
+        <table id="tab">
+          <thead id="tabHead"></thead>
+          <tbody id="tabBody"></tbody>
+          <tfoot id="tabFoot"></tfoot>
+        </table>
+      </div>
+      <p class="disclaimer">
+        Vereinfachte Modellrechnung – <strong>keine Steuer- oder Finanzierungsberatung</strong>.
+        Werbungskosten = Zinsen + lineare Gebäude-AfA + nicht umlagefähige Kosten (Tilgung nicht abziehbar).
+        Beim Verkauf erhöht die in Anspruch genommene AfA den Veräußerungsgewinn; nach 10 Jahren Haltedauer ist der Gewinn im Privatvermögen steuerfrei.
+        <strong>Nicht</strong> berücksichtigt: Erhaltungs-/Herstellungsaufwand-Abgrenzung, Progressionsänderungen, degressive AfA, Vorfälligkeitsentschädigung als Detailgröße, Verlustverrechnungsbeschränkungen.
+        Soli/Kirchensteuer vereinfacht als Zuschlag. Restnutzungsdauer-Gutachten muss vom Finanzamt anerkannt werden. Alle Annahmen vor Verwendung prüfen.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const GREST = {
+  "Baden-Württemberg":5.0,"Bayern":3.5,"Berlin":6.0,"Brandenburg":6.5,"Bremen":5.0,
+  "Hamburg":5.5,"Hessen":6.0,"Mecklenburg-Vorpommern":6.0,"Niedersachsen":5.0,
+  "Nordrhein-Westfalen":6.5,"Rheinland-Pfalz":5.0,"Saarland":6.5,"Sachsen":5.5,
+  "Sachsen-Anhalt":5.0,"Schleswig-Holstein":6.5,"Thüringen":5.0
+};
+
+const eur  = new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR",maximumFractionDigits:2});
+const eur0 = new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR",maximumFractionDigits:0});
+const pct  = (v)=>new Intl.NumberFormat("de-DE",{minimumFractionDigits:1,maximumFractionDigits:2}).format(v)+" %";
+const $ = (id)=>document.getElementById(id);
+const num = (id)=>{const v=parseFloat($(id).value);return isNaN(v)?0:v;};
+
+(function initBundesland(){
+  const sel=$("bundesland");
+  for(const n of Object.keys(GREST)){const o=document.createElement("option");o.value=n;o.textContent=n;sel.appendChild(o);}
+  sel.value="Baden-Württemberg";
+})();
+
+/* ---------- Berechnung ---------- */
+function berechneNebenkosten(){
+  const kaufpreis=num("kaufpreis");
+  const grest=kaufpreis*num("grest")/100;
+  const notar=kaufpreis*num("notar")/100;
+  const makler=kaufpreis*num("makler")/100;
+  const nebenkosten=grest+notar+makler;
+  return {kaufpreis,grest,notar,makler,nebenkosten,gesamt:kaufpreis+nebenkosten};
+}
+
+function tilgungsplan(darlehen,sollzinsP,tilgungP,sonder){
+  const zm=sollzinsP/100/12;
+  const ann=darlehen*(sollzinsP+tilgungP)/100;
+  const rm=ann/12;
+  const jahre=[]; let rest=darlehen,m=0,jZ=0,jT=0,jS=0;
+  if(darlehen<=0) return {jahre,rm:0,getilgt:true};
+  if(rm<=darlehen*zm||rm<=0) return {jahre,rm,getilgt:false};
+  while(rest>0.005&&m<60*12){
+    const z=rest*zm; let t=rm-z; if(t>rest)t=rest; rest-=t; jZ+=z; jT+=t; m++;
+    if(m%12===0||rest<=0.005){
+      if(rest>0.005&&sonder>0){const s=Math.min(sonder,rest);rest-=s;jS+=s;}
+      jahre.push({jahr:Math.ceil(m/12),zins:jZ,tilgung:jT,sonder:jS,restschuld:Math.max(0,rest)});
+      jZ=0;jT=0;jS=0;
+    }
+  }
+  return {jahre,rm,getilgt:rest<=0.005};
+}
+
+function berechne(){
+  const nk=berechneNebenkosten();
+  const darlehen=Math.max(0,nk.gesamt-num("eigenkapital"));
+  const plan=tilgungsplan(darlehen,num("sollzins"),num("tilgung"),num("sondertilgung"));
+
+  const bodenwert=$("bodenMethode").value==="fest"?num("bodenwertFest"):num("flaeche")*num("bodenrichtwert");
+  const gebAnteil=nk.kaufpreis>0?Math.max(0,(nk.kaufpreis-bodenwert))/nk.kaufpreis:0;
+  const afaBasis=gebAnteil*nk.gesamt;
+
+  const afaSatzStd=num("afaStd");
+  const afaStdJahr=afaBasis*afaSatzStd/100;
+  const gutAn=$("gutAktiv").checked;
+  const rnd=num("rnd");
+  const afaSatzGut=gutAn&&rnd>0?100/rnd:0;
+  const afaGutJahr=afaBasis*afaSatzGut/100;
+
+  const effRate=(num("grenzsteuer")/100)*(1+($("soli").checked?0.055:0)+num("kirche")/100);
+  const T=Math.max(1,Math.round(num("zeitraum")));
+  const g=num("mietsteigerung")/100;
+  const miete0=num("kaltmiete")*12;
+  const kostenJ=num("kosten")*12;
+  const verkaufAktiv=$("verkaufAktiv").checked;
+  const vj=Math.min(60,Math.max(1,Math.round(num("verkaufsjahr"))));
+  const N=verkaufAktiv?Math.max(T,vj):T; // Jahresdaten bis Verkaufsjahr erweitern
+
+  const rows=[]; let cumStd=0,cumGut=0;
+  for(let y=1;y<=N;y++){
+    const pj=plan.jahre[y-1];
+    const zins=pj?pj.zins:0, tilg=pj?pj.tilgung:0, rest=pj?pj.restschuld:0;
+    const miete=miete0*Math.pow(1+g,y-1);
+    const cfVor=miete-(zins+tilg)-kostenJ;
+    const afaStd=Math.min(afaStdJahr,Math.max(0,afaBasis-cumStd)); cumStd+=afaStd;
+    const afaGut=Math.min(afaGutJahr,Math.max(0,afaBasis-cumGut)); cumGut+=afaGut;
+    const ergStd=miete-zins-afaStd-kostenJ;
+    const ergGut=miete-zins-afaGut-kostenJ;
+    const steuerStd=effRate*ergStd, steuerGut=effRate*ergGut;
+    rows.push({jahr:y,miete,zins,tilg,kostenJ,cfVor,rest,
+      afaStd,ergStd,steuerStd,cfStd:cfVor-steuerStd,cumStd,
+      afaGut,ergGut,steuerGut,cfGut:cfVor-steuerGut,cumGut});
+  }
+
+  const tRows=rows.slice(0,T); // Auswertung nur über Betrachtungszeitraum
+  const sum=(f)=>tRows.reduce((a,r)=>a+f(r),0);
+  const totals={
+    miete:sum(r=>r.miete), zins:sum(r=>r.zins), tilg:sum(r=>r.tilg), kosten:sum(r=>r.kostenJ),
+    cfVor:sum(r=>r.cfVor),
+    steuerStd:sum(r=>r.steuerStd), cfStd:sum(r=>r.cfStd), afaStd:sum(r=>r.afaStd),
+    steuerGut:sum(r=>r.steuerGut), cfGut:sum(r=>r.cfGut), afaGut:sum(r=>r.afaGut)
+  };
+  totals.ersparnisStd=-totals.steuerStd;
+  totals.ersparnisGut=-totals.steuerGut;
+  totals.mehrErsparnis=totals.ersparnisGut-totals.ersparnisStd;
+
+  // Verkaufsszenario
+  let sale=null;
+  if(verkaufAktiv){
+    const w=num("wertsteigerung")/100;
+    const methode=$("bewMethode").value;
+    const einkaufsfaktor=miete0>0?nk.kaufpreis/miete0:0;
+    const verkaufsfaktor=num("verkaufsfaktor");
+    const mieteVj=miete0*Math.pow(1+g,vj-1); // Jahreskaltmiete im Verkaufsjahr
+    const vp=methode==="faktor" ? mieteVj*verkaufsfaktor : nk.kaufpreis*Math.pow(1+w,vj);
+    const vkosten=vp*num("verkaufskosten")/100;
+    const rowVj=rows[vj-1];
+    const restVj=rowVj?rowVj.rest:0;
+    const kumStd=rowVj?rowVj.cumStd:0;
+    const kumGut=rowVj?rowVj.cumGut:0;
+    const frei=vj>10; // Spekulationsfrist: >10 Jahre steuerfrei
+    const gewinnStd=vp-vkosten-(nk.gesamt-kumStd);
+    const gewinnGut=vp-vkosten-(nk.gesamt-kumGut);
+    const spekStd=frei?0:effRate*Math.max(0,gewinnStd);
+    const spekGut=frei?0:effRate*Math.max(0,gewinnGut);
+    const nettoStd=vp-vkosten-restVj-spekStd;
+    const nettoGut=vp-vkosten-restVj-spekGut;
+    const ek=num("eigenkapital");
+    const cfBisStd=rows.slice(0,vj).reduce((a,r)=>a+r.cfStd,0);
+    const cfBisGut=rows.slice(0,vj).reduce((a,r)=>a+r.cfGut,0);
+    sale={vj,vp,vkosten,restVj,kumStd,kumGut,frei,gewinnStd,gewinnGut,spekStd,spekGut,
+          nettoStd,nettoGut,cfBisStd,cfBisGut,ek,methode,w,einkaufsfaktor,verkaufsfaktor,mieteVj,
+          gesamtStd:cfBisStd+nettoStd-ek, gesamtGut:cfBisGut+nettoGut-ek};
+  }
+
+  return {nk,darlehen,plan,bodenwert,gebAnteil,afaBasis,afaSatzStd,afaStdJahr,
+          gutAn,rnd,afaSatzGut,afaGutJahr,effRate,T,miete0,g,kostenJ,rows,totals,sale,
+          ltv:nk.kaufpreis>0?darlehen/nk.kaufpreis*100:0};
+}
+
+let LAST=null;
+
+/* ---------- Darstellung ---------- */
+function kpi(lbl,val,cls,sub){
+  return `<div class="kpi${cls?" "+cls:""}"><div class="lbl">${lbl}</div><div class="val">${val}</div>${sub?`<div class="sub">${sub}</div>`:""}</div>`;
+}
+const cf=(v)=>`<span class="${v>=0?"pos":"neg"}">${eur.format(v)}</span>`;
+const cf0=(v)=>`<span class="${v>=0?"pos":"neg"}">${eur0.format(v)}</span>`;
+
+function render(){
+  const k=berechne(); LAST=k;
+  const gut=k.gutAn;
+  $("rndFeld").style.display=gut?"":"none";
+  $("verkaufFelder").style.display=$("verkaufAktiv").checked?"":"none";
+  const bodenFest=$("bodenMethode").value==="fest";
+  $("bodenQm").style.display=bodenFest?"none":"";
+  $("bodenFest").style.display=bodenFest?"":"none";
+  const methode=$("bewMethode").value;
+  $("feldProzent").style.display=methode==="faktor"?"none":"";
+  $("feldFaktor").style.display=methode==="faktor"?"":"none";
+  const efLive=num("kaltmiete")*12>0?num("kaufpreis")/(num("kaltmiete")*12):0;
+  $("efHint").innerHTML=`Einkaufsfaktor aktuell: <strong>${efLive.toFixed(1)}×</strong> (Kaufpreis ÷ Jahreskaltmiete). Verkaufspreis = Jahreskaltmiete im Verkaufsjahr × Faktor.`;
+  $("zrLabel").textContent=k.T;
+  $("vergleichCard").style.display=gut?"":"none";
+  $("legGut").style.display=gut?"":"none";
+  $("verkaufCard").style.display=k.sale?"":"none";
+
+  const warn=[];
+  if(!k.plan.getilgt&&k.darlehen>0) warn.push("Die Rate deckt die Zinsen nicht – bitte Tilgung erhöhen.");
+  if(k.darlehen<=0) warn.push("Kein Darlehen erforderlich (Eigenkapital ≥ Gesamtinvestition).");
+  if(k.bodenwert>=k.nk.kaufpreis) warn.push("Bodenwert ≥ Kaufpreis – Gebäudeanteil 0 %, keine AfA. Fläche/Bodenrichtwert prüfen.");
+  $("warnung").innerHTML=warn.map(t=>`<div class="warn-box">⚠️ ${t}</div>`).join("");
+
+  $("kpiBasis").innerHTML=
+    kpi("Gesamtinvestition",eur0.format(k.nk.gesamt))+
+    kpi("Darlehen",eur0.format(k.darlehen),null,"LTV "+pct(k.ltv))+
+    kpi("Monatliche Rate",eur.format(k.plan.rm),"highlight")+
+    kpi("Bodenwert (n. abschreibb.)",eur0.format(k.bodenwert))+
+    kpi("Gebäudeanteil",pct(k.gebAnteil*100))+
+    kpi("AfA-Basis (Gebäude)",eur0.format(k.afaBasis));
+  $("basisDetail").innerHTML=
+    `Kaufnebenkosten ${eur0.format(k.nk.nebenkosten)} · `+
+    `Standard-AfA ${pct(k.afaSatzStd)} = <strong>${eur0.format(k.afaStdJahr)}/J.</strong>`+
+    (gut?` · Gutachten-AfA ${pct(k.afaSatzGut)} (RND ${k.rnd} J.) = <strong>${eur0.format(k.afaGutJahr)}/J.</strong>`:"")+
+    (k.g?` · Mietsteigerung ${pct(k.g*100)} p.a.`:"");
+
+  const r1=k.rows[0];
+  $("kpiCf").innerHTML=
+    kpi("CF vor Steuern / Monat",cf(r1.cfVor/12),null,eur0.format(r1.cfVor)+"/J.")+
+    kpi("CF nach Steuern (Std) / Monat",cf(r1.cfStd/12),null,eur0.format(r1.cfStd)+"/J.")+
+    (gut?kpi("CF nach Steuern (Gut.) / Monat",cf(r1.cfGut/12),"gut",eur0.format(r1.cfGut)+"/J."):"")+
+    kpi("Steuereffekt Jahr 1 (Std)",cf(-r1.steuerStd),null,r1.steuerStd<0?"Erstattung":"Zahlung");
+
+  if(gut){
+    $("kpiVergleich").innerHTML=
+      kpi("Steuerentlastung Standard",eur0.format(k.totals.ersparnisStd),null,"über "+k.T+" J.")+
+      kpi("Steuerentlastung Gutachten",eur0.format(k.totals.ersparnisGut),"gut","über "+k.T+" J.")+
+      kpi("Mehr-Entlastung durch Gutachten",eur0.format(k.totals.mehrErsparnis),"highlight","kumuliert über "+k.T+" J.")+
+      kpi("Ø CF nach Steuern (Gut.) / Monat",cf(k.totals.cfGut/k.T/12));
+  }
+
+  // Verkauf
+  if(k.sale){
+    const s=k.sale;
+    $("vjLabel").textContent=s.vj;
+    const vpSub=s.methode==="faktor"
+      ? `Faktor ${new Intl.NumberFormat("de-DE",{maximumFractionDigits:1}).format(s.verkaufsfaktor)}× · Einkauf ${s.einkaufsfaktor.toFixed(1)}×`
+      : `${pct(s.w*100)} p.a. · Einkaufsfaktor ${s.einkaufsfaktor.toFixed(1)}×`;
+    let html=
+      kpi("Verkaufspreis (Jahr "+s.vj+")",eur0.format(s.vp),"highlight",vpSub)+
+      kpi("Restschuld bei Verkauf",eur0.format(s.restVj))+
+      kpi("Veräußerungsgewinn (Std)",cf0(s.gewinnStd))+
+      (s.frei?"":kpi("Spekulationssteuer (Std)",eur0.format(s.spekStd)))+
+      kpi("Nettoerlös n. Tilg. & St. (Std)",cf0(s.nettoStd))+
+      kpi("Gesamtüberschuss Haltedauer (Std)",cf0(s.gesamtStd),"highlight","CF + Nettoerlös − EK");
+    if(gut){
+      html+=
+        kpi("Veräußerungsgewinn (Gut.)",cf0(s.gewinnGut),"gut")+
+        (s.frei?"":kpi("Spekulationssteuer (Gut.)",eur0.format(s.spekGut),"gut"))+
+        kpi("Nettoerlös (Gut.)",cf0(s.nettoGut),"gut")+
+        kpi("Gesamtüberschuss (Gut.)",cf0(s.gesamtGut),"gut");
+    }
+    $("kpiVerkauf").innerHTML=html;
+    let hinweis="";
+    if(s.frei){
+      hinweis=`✓ Verkauf nach ${s.vj} Jahren (mehr als 10 J. Haltedauer): Veräußerungsgewinn im Privatvermögen <strong>steuerfrei</strong> – keine Spekulationssteuer.`;
+    } else if(gut){
+      const mehrSpek=s.spekGut-s.spekStd;
+      hinweis=`⚠️ Verkauf in Jahr ${s.vj} – innerhalb der 10-jährigen Spekulationsfrist, daher steuerpflichtig. Die höhere Gutachten-AfA erhöht den Veräußerungsgewinn und damit die Spekulationssteuer um <strong>${eur0.format(mehrSpek)}</strong> (AfA-Nachversteuerung) – ein Teil der laufenden Mehr-Entlastung (${eur0.format(k.totals.mehrErsparnis)}) wird beim Verkauf zurückgeholt.`;
+    } else {
+      hinweis=`⚠️ Verkauf in Jahr ${s.vj} – innerhalb der 10-jährigen Spekulationsfrist: Veräußerungsgewinn ist steuerpflichtig.`;
+    }
+    $("spekHinweis").innerHTML=`<div class="info-box">${hinweis}</div>`;
+  }
+
+  renderTabelle(k,gut);
+  zeichneChart(k,gut);
+}
+
+function renderTabelle(k,gut){
+  let head=`<tr><th>Jahr</th><th>Miete</th><th>Zins</th><th>Tilgung</th><th>n.uml. Kosten</th><th>CF vor St.</th>`+
+           `<th>AfA Std</th><th>St.-Erg. Std</th><th>Steuer Std</th><th>CF n.St. Std</th>`;
+  if(gut) head+=`<th class="gutcol">AfA Gut.</th><th class="gutcol">St.-Erg. Gut.</th><th class="gutcol">Steuer Gut.</th><th class="gutcol">CF n.St. Gut.</th>`;
+  head+=`</tr>`;
+  $("tabHead").innerHTML=head;
+
+  const stxt=(v)=>v<0?`<span class="pos">+${eur0.format(-v)}</span>`:eur0.format(-v);
+  $("tabBody").innerHTML=k.rows.map(r=>{
+    let row=`<tr><td>${r.jahr}</td><td>${eur0.format(r.miete)}</td><td>${eur0.format(r.zins)}</td>`+
+      `<td>${eur0.format(r.tilg)}</td><td>${eur0.format(r.kostenJ)}</td><td>${cf0(r.cfVor)}</td>`+
+      `<td>${eur0.format(r.afaStd)}</td><td>${eur0.format(r.ergStd)}</td><td>${stxt(r.steuerStd)}</td><td>${cf0(r.cfStd)}</td>`;
+    if(gut) row+=`<td class="gutcol">${eur0.format(r.afaGut)}</td><td class="gutcol">${eur0.format(r.ergGut)}</td>`+
+      `<td class="gutcol">${stxt(r.steuerGut)}</td><td class="gutcol">${cf0(r.cfGut)}</td>`;
+    return row+`</tr>`;
+  }).join("");
+
+  const n=k.rows.length; const S=(f)=>k.rows.reduce((a,r)=>a+f(r),0);
+  let foot=`<tr><td>Σ ${n} J.</td><td>${eur0.format(S(r=>r.miete))}</td><td>${eur0.format(S(r=>r.zins))}</td>`+
+    `<td>${eur0.format(S(r=>r.tilg))}</td><td>${eur0.format(S(r=>r.kostenJ))}</td><td>${cf0(S(r=>r.cfVor))}</td>`+
+    `<td>${eur0.format(S(r=>r.afaStd))}</td><td>–</td><td>${stxt(S(r=>r.steuerStd))}</td><td>${cf0(S(r=>r.cfStd))}</td>`;
+  if(gut) foot+=`<td class="gutcol">${eur0.format(S(r=>r.afaGut))}</td><td class="gutcol">–</td>`+
+    `<td class="gutcol">${stxt(S(r=>r.steuerGut))}</td><td class="gutcol">${cf0(S(r=>r.cfGut))}</td>`;
+  $("tabFoot").innerHTML=foot+`</tr>`;
+}
+
+function zeichneChart(k,gut){
+  const W=700,H=270,padL=64,padR=14,padT=14,padB=30,iW=W-padL-padR,iH=H-padT-padB;
+  const rows=k.rows;
+  const series=[{key:"cfVor",col:"var(--vor)"},{key:"cfStd",col:"var(--std)"}];
+  if(gut) series.push({key:"cfGut",col:"var(--gut)"});
+  const vals=rows.flatMap(r=>series.map(s=>r[s.key]));
+  let lo=Math.min(0,...vals), hi=Math.max(0,...vals); if(hi===lo)hi=lo+1;
+  const n=rows.length;
+  const x=(i)=>n<=1?padL+iW/2:padL+iW*i/(n-1);
+  const y=(v)=>padT+iH-(v-lo)/(hi-lo)*iH;
+
+  let axis=`<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+iH}" stroke="#cbd5e1"/>`;
+  for(let t=0;t<=4;t++){const val=lo+(hi-lo)*t/4;const yy=y(val);
+    axis+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="#eef2f6"/>`;
+    axis+=`<text x="${padL-8}" y="${(yy+3).toFixed(1)}" font-size="9" fill="#6b7280" text-anchor="end">${eur0.format(val)}</text>`;}
+  const y0=y(0); axis+=`<line x1="${padL}" y1="${y0.toFixed(1)}" x2="${W-padR}" y2="${y0.toFixed(1)}" stroke="#94a3b8" stroke-dasharray="3 3"/>`;
+  const lblEvery=Math.ceil(n/12);
+  rows.forEach((r,i)=>{if(i%lblEvery===0||i===n-1)axis+=`<text x="${x(i).toFixed(1)}" y="${H-10}" font-size="9" fill="#6b7280" text-anchor="middle">${r.jahr}</text>`;});
+
+  let lines="";
+  for(const s of series){
+    const pts=rows.map((r,i)=>`${x(i).toFixed(1)},${y(r[s.key]).toFixed(1)}`).join(" ");
+    lines+=`<polyline points="${pts}" fill="none" stroke="${s.col}" stroke-width="2.4"/>`;
+    lines+=rows.map((r,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(r[s.key]).toFixed(1)}" r="2.5" fill="${s.col}"/>`).join("");
+  }
+  $("chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cashflow nach Steuern">${axis}${lines}</svg>`;
+}
+
+/* ---------- CSV-Export ---------- */
+function exportCSV(){
+  const k=LAST||berechne(); const gut=k.gutAn;
+  const de=(v)=>v.toFixed(2).replace(".",",");
+  let head=["Jahr","Miete","Zins","Tilgung","Nicht uml. Kosten","CF vor Steuern","AfA Std","St.-Ergebnis Std","Steuer Std","CF nach Steuern Std"];
+  if(gut) head=head.concat(["AfA Gutachten","St.-Ergebnis Gutachten","Steuer Gutachten","CF nach Steuern Gutachten"]);
+  const lines=[head.join(";")];
+  for(const r of k.rows){
+    let c=[r.jahr,de(r.miete),de(r.zins),de(r.tilg),de(r.kostenJ),de(r.cfVor),de(r.afaStd),de(r.ergStd),de(r.steuerStd),de(r.cfStd)];
+    if(gut) c=c.concat([de(r.afaGut),de(r.ergGut),de(r.steuerGut),de(r.cfGut)]);
+    lines.push(c.join(";"));
+  }
+  const meta=[
+    `Immobilien-Finanzierung mit Steuer/AfA/Verkauf`,
+    `Kaufpreis;${de(k.nk.kaufpreis)}`,
+    `Gesamtinvestition;${de(k.nk.gesamt)}`,
+    `Darlehen;${de(k.darlehen)}`,
+    `Monatsrate;${de(k.plan.rm)}`,
+    `Gebaeudeanteil %;${de(k.gebAnteil*100)}`,
+    `AfA-Basis;${de(k.afaBasis)}`,
+    `Mietsteigerung % p.a.;${de(k.g*100)}`,
+    `Grenzsteuersatz effektiv %;${de(k.effRate*100)}`,
+    `Betrachtungszeitraum Jahre;${k.T}`
+  ];
+  if(k.sale){
+    const s=k.sale;
+    meta.push(``,`VERKAUF`,`Verkaufsjahr;${s.vj}`,
+      `Bewertungsmethode;${s.methode==="faktor"?"Verkaufsfaktor":"Wertsteigerung %"}`,
+      s.methode==="faktor"?`Verkaufsfaktor;${de(s.verkaufsfaktor)}`:`Wertsteigerung % p.a.;${de(s.w*100)}`,
+      `Einkaufsfaktor;${de(s.einkaufsfaktor)}`,
+      `Verkaufspreis;${de(s.vp)}`,
+      `Restschuld;${de(s.restVj)}`,`Spekulationsfrist abgelaufen;${s.frei?"ja":"nein"}`,
+      `Veraeusserungsgewinn Std;${de(s.gewinnStd)}`,`Spekulationssteuer Std;${de(s.spekStd)}`,
+      `Nettoerloes Std;${de(s.nettoStd)}`,`Gesamtueberschuss Std;${de(s.gesamtStd)}`);
+    if(gut) meta.push(`Veraeusserungsgewinn Gut;${de(s.gewinnGut)}`,`Spekulationssteuer Gut;${de(s.spekGut)}`,
+      `Nettoerloes Gut;${de(s.nettoGut)}`,`Gesamtueberschuss Gut;${de(s.gesamtGut)}`);
+  }
+  const csv="﻿"+meta.join("\n")+"\n\n"+lines.join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="Finanzierungsanalyse-Steuer.csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ---------- Events ---------- */
+$("bundesland").addEventListener("change",e=>{const r=GREST[e.target.value];if(r!=null)$("grest").value=r;render();});
+$("gutAktiv").addEventListener("change",render);
+$("verkaufAktiv").addEventListener("change",render);
+$("bewMethode").addEventListener("change",render);
+$("bodenMethode").addEventListener("change",render);
+$("soli").addEventListener("change",render);
+$("afaStd").addEventListener("change",render);
+document.querySelectorAll('input[type="number"]').forEach(el=>el.addEventListener("input",render));
+
+// Verkaufsfaktor initial auf den Einkaufsfaktor setzen (danach frei editierbar)
+(function initFaktor(){
+  const ef=num("kaltmiete")*12>0?num("kaufpreis")/(num("kaltmiete")*12):0;
+  if(ef&&isFinite(ef)) $("verkaufsfaktor").value=ef.toFixed(1);
+})();
+render();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(function(){});});}</script>
+</body>
+</html>

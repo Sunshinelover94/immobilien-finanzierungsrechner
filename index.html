@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a2332">
+<meta name="description" content="Immobilien-Finanzierungsrechner: Annuität, Tilgungsplan, LTV, AfA, Cashflow vor/nach Steuern, Restnutzungsdauer-Gutachten und Verkaufsszenario.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Immobilien-Finanzierungsrechner</title>
+<style>
+  /* Theme: Ocean Depths */
+  :root{
+    --navy:#1a2332; --teal:#2d8b8b; --seafoam:#a8dadc; --cream:#f1faee;
+    --bg:#eef4f4; --card:#fff; --ink:#1b2a33; --muted:#5d7682; --line:#dbe7e6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:"Segoe UI",Roboto,Arial,sans-serif; color:var(--ink); line-height:1.55;
+    background:radial-gradient(1200px 500px at 80% -10%,#dfeeed 0%,rgba(223,238,237,0) 60%),var(--bg);
+    -webkit-font-smoothing:antialiased; min-height:100vh;}
+  header{background:linear-gradient(135deg,#1a2332 0%,#245b63 55%,#2d8b8b 100%); color:var(--cream);
+    padding:30px 22px 34px; position:relative; overflow:hidden;}
+  header::after{content:""; position:absolute; right:-50px; top:-70px; width:260px; height:260px;
+    background:radial-gradient(circle,rgba(168,218,220,.25),rgba(168,218,220,0) 70%); border-radius:50%;}
+  .head-in{max-width:880px; margin:0 auto; position:relative;}
+  header h1{margin:0; font-size:1.7rem; font-weight:800; letter-spacing:.2px;}
+  header p{margin:8px 0 0; color:var(--seafoam); font-size:.95rem;}
+  .wrap{max-width:880px; margin:-18px auto 0; padding:0 22px 40px; position:relative;}
+  .cards{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:6px;}
+  @media(max-width:680px){.cards{grid-template-columns:1fr;}}
+  a.card{display:block; text-decoration:none; color:inherit; background:var(--card); border:1px solid var(--line);
+    border-radius:18px; padding:22px; box-shadow:0 1px 2px rgba(26,35,50,.05),0 16px 34px -20px rgba(26,35,50,.3);
+    transition:transform .16s ease, box-shadow .16s ease;}
+  a.card:hover{transform:translateY(-4px); box-shadow:0 22px 40px -22px rgba(26,35,50,.45);}
+  .badge{display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; border-radius:12px;
+    background:linear-gradient(135deg,#1a2332,#2d8b8b); color:#fff; font-size:1.4rem; margin-bottom:12px;}
+  a.card h2{margin:0 0 6px; font-size:1.15rem; color:var(--navy);}
+  a.card p{margin:0; color:var(--muted); font-size:.9rem;}
+  a.card .go{margin-top:14px; display:inline-block; color:var(--teal); font-weight:700; font-size:.9rem;}
+  .intro{background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px 18px; margin-top:20px;
+    box-shadow:0 1px 2px rgba(26,35,50,.04);}
+  .intro h3{margin:0 0 6px; font-size:1rem; color:var(--navy);}
+  .intro p{margin:0; color:var(--muted); font-size:.88rem;}
+  .install{margin-top:16px; background:#e6f3f3; border:1px solid #b9dede; color:#1d5e5e; border-radius:12px;
+    padding:12px 16px; font-size:.86rem;}
+  .install strong{color:#16484a;}
+  .disclaimer{margin-top:18px; color:var(--muted); font-size:.74rem; text-align:center;}
+  footer{color:var(--muted); font-size:.78rem; text-align:center; padding:8px 0 26px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <h1>🏠 Immobilien-Finanzierungsrechner</h1>
+    <p>Hausverwaltung Kurrle · Annuität, Tilgung, LTV · Steuer/AfA · Verkaufsszenario</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="cards">
+    <a class="card" href="steuer.html">
+      <div class="badge">📊</div>
+      <h2>Steuer-, AfA- &amp; Verkaufsrechner</h2>
+      <p>Vollumfänglich: Kaufnebenkosten, Annuität &amp; Tilgungsplan, Cashflow vor und nach Steuern, lineare AfA bzw. Restnutzungsdauer-Gutachten, Mietsteigerung sowie Verkaufsszenario mit Spekulationssteuer.</p>
+      <span class="go">Öffnen →</span>
+    </a>
+    <a class="card" href="basis.html">
+      <div class="badge">🧮</div>
+      <h2>Basis-Finanzierungsrechner</h2>
+      <p>Schlank: Kaufpreis, Kaufnebenkosten je Bundesland, Eigenkapital, monatliche Rate, LTV, Tilgungsplan und – optional – einfache Mietrendite/Cashflow.</p>
+      <span class="go">Öffnen →</span>
+    </a>
+  </div>
+
+  <div class="intro">
+    <h3>Was ist das?</h3>
+    <p>Zwei browserbasierte Rechner für Immobilienfinanzierungen. Alles läuft lokal im Browser – es werden keine Daten übertragen oder gespeichert. Nach dem ersten Laden funktionieren die Rechner auch offline.</p>
+  </div>
+
+  <div class="install">
+    📲 <strong>Als App installieren:</strong> In Chrome/Edge erscheint rechts in der Adresszeile ein Installieren-Symbol – damit landet die App als eigene Verknüpfung im Startmenü. Auf dem Smartphone über das Browser-Menü „Zum Startbildschirm hinzufügen".
+  </div>
+
+  <p class="disclaimer">Vereinfachte Modellrechnungen – keine Steuer-, Rechts- oder Finanzierungsberatung. Alle Annahmen (z. B. Grunderwerbsteuersätze) vor Verwendung prüfen.</p>
+</div>
+
+<footer>© Hausverwaltung Kurrle</footer>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
