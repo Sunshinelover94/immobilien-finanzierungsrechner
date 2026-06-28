@@ -138,6 +138,7 @@
 
   <div class="btnbar no-print">
     <button class="act" onclick="window.print()">🖨️ Drucken / PDF</button>
+    <button class="act alt" onclick="exportXLSX()">📊 Excel (.xlsx)</button>
     <button class="act alt" onclick="exportCSV()">⬇️ CSV</button>
   </div>
 
@@ -440,6 +441,48 @@ function exportCSV(){
   const blob=new Blob(["﻿"+L.join("\n")],{type:"text/csv;charset=utf-8;"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="Finanzierungsvergleich.csv";
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+async function ensureXLSX(){ if(window.XLSX) return window.XLSX; await loadScript('xlsx.full.min.js'); return window.XLSX; }
+async function exportXLSX(){
+  if(!LAST||!LAST.res.length){ alert('Keine aktive Variante – bitte oben mindestens eine Variante aktivieren.'); return; }
+  let X; try{ X=await ensureXLSX(); }catch(e){ alert('Excel-Bibliothek nicht ladbar: '+e.message); return; }
+  const {S,res}=LAST; const EUR='#,##0" €"', PCT='0.0" %"';
+  const setZ=(ws,r,c,z)=>{ const ref=X.utils.encode_cell({r,c}); if(ws[ref]&&ws[ref].t==='n') ws[ref].z=z; };
+  // Blatt 1: Vergleich
+  const rd=[['Darlehen gesamt',res.map(r=>r.darlehen),EUR],
+    ['Eingesetztes Eigenkapital',res.map(r=>r.ek0),EUR],
+    ['Monatsrate (Start)',res.map(r=>r.rateStart),EUR],
+    ['Effektivzins (Näherung)',res.map(r=>r.eff),PCT],
+    ['Restschuld n. Zinsbindung',res.map(r=>r.restNachZb),EUR],
+    ['Restschuld am Ende ('+S.T+' J.)',res.map(r=>r.restEnde),EUR]];
+  if(S.ka){ rd.push(['Summe Cashflow vor Steuern',res.map(r=>r.sumCfVor),EUR],
+    ['Summe Cashflow nach Steuern',res.map(r=>r.sumCfNach),EUR],
+    ['kum. Steuerersparnis',res.map(r=>r.kumSteuerersparnis),EUR]); }
+  else { rd.push(['Summe Liquiditäts-Abfluss',res.map(r=>r.sumCfVor),EUR]); }
+  rd.push(['IRR (Eigenkapitalrendite)',res.map(r=>r.irr),PCT],['Vermögen am Ende',res.map(r=>r.vermoegenEnde),EUR]);
+  const aoa=[['Kennzahl',...res.map(r=>r.v.name)], ...rd.map(x=>[x[0],...x[1].map(v=>v==null?null:Math.round(v*100)/100)])];
+  const ws=X.utils.aoa_to_sheet(aoa);
+  rd.forEach((x,ri)=>res.forEach((_,ci)=>setZ(ws,ri+1,ci+1,x[2])));
+  ws['!cols']=[{wch:30},...res.map(()=>({wch:17}))];
+  // Blatt 2: Jahresverlauf
+  const jh=['Jahr']; res.forEach(r=>jh.push(r.v.name+' CF vor St.',r.v.name+' CF n.St.',r.v.name+' Vermögen'));
+  const jaoa=[jh];
+  for(let y=0;y<S.T;y++){ const row=[y+1]; res.forEach(r=>row.push(Math.round(r.rows[y].cfVor),Math.round(r.rows[y].cfNach),Math.round(r.rows[y].vermoegen))); jaoa.push(row); }
+  const ws2=X.utils.aoa_to_sheet(jaoa);
+  for(let r=1;r<jaoa.length;r++) for(let c=1;c<jh.length;c++) setZ(ws2,r,c,EUR);
+  ws2['!cols']=[{wch:6},...Array(jh.length-1).fill({wch:17})];
+  // Blatt 3: Eingaben
+  const ea=[['Gemeinsame Annahmen',''],['Nutzung',S.ka?'Kapitalanlage':'Eigennutzung'],
+    ['Kaufpreis',S.kaufpreis],['Gesamtinvestition',Math.round(S.gesamt)],['Betrachtungszeitraum (J.)',S.T],['Wertsteigerung p.a. (%)',S.gw*100]];
+  if(S.ka) ea.push(['Kaltmiete / Monat',Math.round(S.miete0/12)],['Mietsteigerung (%)',S.gm*100],['AfA-Basis',Math.round(S.afaBasis)],['AfA / Jahr',Math.round(S.afaJahr)],['Grenzsteuersatz (%)',S.effRate*100]);
+  ea.push(['',''],['Variante','Darlehen','Sollzins (%)','Tilgung (%)','Zinsbindung (J.)','Anschlusszins (%)']);
+  res.forEach(r=>{ const t=r.v.tr[0]; ea.push([r.v.name,r.darlehen,t.sz,t.tg,t.zb,t.an]); });
+  const ws3=X.utils.aoa_to_sheet(ea); ws3['!cols']=[{wch:24},{wch:15},{wch:12},{wch:12},{wch:14},{wch:15}];
+  const wb=X.utils.book_new();
+  X.utils.book_append_sheet(wb,ws,'Vergleich');
+  X.utils.book_append_sheet(wb,ws2,'Jahresverlauf');
+  X.utils.book_append_sheet(wb,ws3,'Eingaben');
+  X.writeFile(wb,'Finanzierungsvergleich.xlsx');
 }
 
 /* ---------- Events ---------- */
