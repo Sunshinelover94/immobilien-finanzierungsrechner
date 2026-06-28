@@ -1,5 +1,5 @@
 /* Service Worker – Cache-First App-Shell (offline-fähig) */
-const CACHE = 'ifr-v5';
+const CACHE = 'ifr-v6';
 const ASSETS = [
   './', 'index.html', 'steuer.html', 'basis.html', 'vergleich.html',
   'xlsx.full.min.js',

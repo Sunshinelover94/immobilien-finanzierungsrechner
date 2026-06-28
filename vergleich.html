@@ -538,44 +538,50 @@ function parseOffer(t){
   const num=(res)=>{ const r=findNum(t,res); return r?r.v:null; };
   const d={};
   d.darlehen=num([
-    /Nettodarlehensbetrag[^0-9]{0,30}([\d.][\d.,]*)\s*(?:EUR|€)/i,
-    /Darlehensbetrag[^0-9]{0,30}([\d.][\d.,]*)\s*(?:EUR|€)/i,
-    /Darlehenssumme[^0-9]{0,30}([\d.][\d.,]*)\s*(?:EUR|€)/i,
-    /Finanzierungsbetrag[^0-9]{0,30}([\d.][\d.,]*)\s*(?:EUR|€)/i,
-    /(?:Nennbetrag|Darlehen)[^0-9]{0,22}([\d.][\d.,]*)\s*(?:EUR|€)/i
+    /Nettodarlehensbetrag[^0-9]{0,30}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
+    /Darlehens(?:nenn)?betrag[^0-9]{0,30}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
+    /Darlehenssumme[^0-9]{0,30}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
+    /(?:Finanzierungs(?:betrag|summe)|Kreditbetrag|Kreditsumme)[^0-9]{0,30}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
+    /(?:Nennbetrag|Nominalbetrag)(?:\s+des\s+Darlehens)?[^0-9]{0,22}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
+    /Darlehen[^0-9]{0,22}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i
   ]);
   d.sollzins=num([
-    /gebundener\s+Sollzins(?:satz)?[^0-9]{0,30}(\d{1,2}(?:,\d+)?)\s*%/i,
-    /Sollzins(?:satz)?[^0-9]{0,30}(\d{1,2}(?:,\d+)?)\s*%/i,
-    /Nominalzins(?:satz)?[^0-9]{0,30}(\d{1,2}(?:,\d+)?)\s*%/i
+    /gebundener\s+Sollzins(?:satz)?[^0-9]{0,30}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i,
+    /Sollzins(?:satz)?[^0-9]{0,30}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i,
+    /Nominalzins(?:satz)?[^0-9]{0,30}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i,
+    /Zinssatz\s*\(?\s*gebunden\s*\)?[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i
   ]);
   d.tilgung=num([
-    /anf[äa][^%]{0,16}Tilgung[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*%/i,
-    /Tilgungssatz[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*%/i,
-    /(?<!Sonder)Tilgung[^0-9%]{0,18}(\d{1,2}(?:,\d+)?)\s*%/i
+    /(?:anf[äa]\w*|anf\.)\s*Tilgung(?:ssatz)?[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i,
+    /Anfangstilgung[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i,
+    /Tilgungssatz[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i,
+    /(?<!Sonder)Tilgung[^0-9%]{0,18}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i
   ]);
   const zb=findNum(t,[
     /Sollzinsbindung[^0-9]{0,30}(\d{1,3})\s*(?:Jahre?|J\b|Monate?|Mon)/i,
     /Zinsbindung(?:sfrist|sdauer)?[^0-9]{0,30}(\d{1,3})\s*(?:Jahre?|J\b|Monate?|Mon)/i,
-    /Zinsfestschreibung[^0-9]{0,30}(\d{1,3})\s*(?:Jahre?|J\b|Monate?|Mon)/i
+    /Zinsfestschreibung(?:sdauer|sfrist)?[^0-9]{0,30}(\d{1,3})\s*(?:Jahre?|J\b|Monate?|Mon)/i,
+    /(\d{1,3})\s*[- ]?j[äa]hrige?\s+(?:Sollzins|Zins)bindung/i,
+    /(?:Sollzins|Zins)bindung\s+(?:von|über)\s+(\d{1,3})\s*(?:Jahre|Monate)/i,
+    /feste[rs]?\s+Zins(?:satz)?\s+(?:für|über)\s+(\d{1,3})\s*Jahre/i
   ]);
   if(zb) d.zinsbindung = zb.mon ? Math.round(zb.v/12) : zb.v;
   d.monatsrate=num([
-    /monatlich[a-z]*\s+Rate[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i,
-    /Monatsrate[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i,
-    /Annuit[äa]t[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i,
-    /\bRate[^0-9]{0,14}([\d.][\d.,]*)\s*(?:EUR|€)/i
+    /(?:monatlich[a-z]*|mtl\.?|monatl\.?)\s*(?:Rate|Belastung)[^0-9]{0,18}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
+    /Monatsrate[^0-9]{0,18}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
+    /(?:Kreditrate|Annuit[äa]t)[^0-9]{0,18}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
+    /\bRate[^0-9]{0,14}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i
   ]);
-  d.disagio=num([ /Disagio[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*%/i, /Damnum[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*%/i ]);
+  d.disagio=num([ /Disagio[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i, /Damnum[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i ]);
+  if(d.disagio==null){ const ak=findNum(t,[ /Auszahlungs(?:kurs|wert)[^0-9]{0,18}(\d{2,3}(?:,\d+)?)\s*%/i, /Auszahlung[^0-9]{0,12}(\d{2,3}(?:,\d+)?)\s*%/i ]); if(ak && ak.v>=80 && ak.v<100) d.disagio=Math.round((100-ak.v)*100)/100; }
   d.gebuehr=num([
-    /Bearbeitungsgeb[üu]hr[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i,
-    /Bearbeitungsentgelt[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i,
-    /Sch[äa]tzkosten[^0-9]{0,18}([\d.][\d.,]*)\s*(?:EUR|€)/i
+    /Bearbeitungs(?:geb[üu]hr|entgelt|kosten)[^0-9]{0,18}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
+    /(?:Sch[äa]tz(?:kosten|geb[üu]hr)|Gutachterkosten|Wertermittlungskosten)[^0-9]{0,18}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i
   ]);
-  const stE=findNum(t,[ /Sondertilgung[^0-9]{0,30}([\d.][\d.,]*)\s*(?:EUR|€)/i ]);
-  const stP=findNum(t,[ /Sondertilgung[^0-9%]{0,30}(\d{1,2}(?:,\d+)?)\s*%/i ]);
+  const stE=findNum(t,[ /Sondertilgung[^0-9]{0,30}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i ]);
+  const stP=findNum(t,[ /Sondertilgung[^0-9%]{0,30}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i ]);
   if(stE) d.sondertilgung=stE.v; else if(stP && d.darlehen) d.sondertilgung=Math.round(d.darlehen*stP.v/100);
-  const bn=t.match(/([A-ZÄÖÜ][A-Za-zÄÖÜäöüß.\-& ]{2,38}?(?:Sparkasse|Volksbank|Raiffeisenbank|Bausparkasse|Hypothekenbank|Kreditbank|Bank|AG|eG))\b/);
+  const bn=t.match(/([A-ZÄÖÜ][A-Za-zÄÖÜäöüß.\-& ]{2,38}?(?:Sparkasse|Volksbank|Raiffeisenbank|PSD[\s-]?Bank|Sparda[\s-]?Bank|Bausparkasse|Hypothekenbank|Pfandbriefbank|Kreditbank|Bank|AG|eG))\b/);
   if(bn) d.name=bn[1].trim().replace(/\s+/g,' ');
   return d;
 }
