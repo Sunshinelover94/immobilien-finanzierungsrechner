@@ -92,7 +92,7 @@
 <body>
 <header>
   <h1>⚖️ Finanzierungsvergleich</h1>
-  <p>Hausverwaltung Kurrle · bis zu 3 Angebote · Cashflow vor/nach Steuern · Vermögen · Effektivzins · IRR &middot; <a class="back" href="index.html">← Übersicht</a></p>
+  <p>Beta Kurrle Immobilien · bis zu 3 Angebote · Cashflow vor/nach Steuern · Vermögen · Effektivzins · IRR &middot; <a class="back" href="index.html">← Übersicht</a></p>
 </header>
 
 <div class="wrap">
@@ -521,13 +521,20 @@ document.addEventListener("change",render);
 render();
 
 /* ---------- Angebots-Import: 100% lokal (Text-Extraktion + Muster-Parser, keine API) ---------- */
-function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Bibliothek nicht ladbar (Internet?)'));document.head.appendChild(s);});}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Bibliothek nicht ladbar (beim ersten Mal ist eine Internetverbindung nötig)'));document.head.appendChild(s);});}
 async function ensurePdf(){ if(window.pdfjsLib) return window.pdfjsLib;
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  await loadScript('lib/pdf.min.js');
+  if(!window.pdfjsLib) throw new Error('PDF-Bibliothek nicht ladbar (beim ersten Mal ist eine Internetverbindung nötig)');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc='lib/pdf.worker.min.js';
   return window.pdfjsLib; }
+// Texterkennung samt Kern und Sprachdaten aus dem eigenen Ordner lib/tesseract (keine fremden Server);
+// absolute Adressen, weil der Worker aus einer Blob-URL startet
+const TESS_OPT={workerPath:new URL('lib/tesseract/worker.min.js',location.href).href,
+  corePath:new URL('lib/tesseract/',location.href).href, langPath:new URL('lib/tesseract/',location.href).href};
 async function ensureTess(){ if(window.Tesseract) return window.Tesseract;
-  await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'); return window.Tesseract; }
+  await loadScript('lib/tesseract/tesseract.min.js');
+  if(!window.Tesseract) throw new Error('Texterkennung nicht ladbar (beim ersten Mal ist eine Internetverbindung nötig)');
+  return window.Tesseract; }
 async function fileToText(file,setStatus){
   const isPdf=(file.type==='application/pdf'||/\.pdf$/i.test(file.name));
   if(isPdf){
@@ -539,38 +546,44 @@ async function fileToText(file,setStatus){
     const T=await ensureTess(); let o='';
     for(let p=1;p<=Math.min(pdf.numPages,4);p++){ const pg=await pdf.getPage(p); const vp=pg.getViewport({scale:2});
       const cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
-      await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise; o+=(await T.recognize(cv,'deu')).data.text+'\n'; }
+      await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise; o+=(await T.recognize(cv,'deu',TESS_OPT)).data.text+'\n'; }
     return o;
   }
   setStatus('Bild-OCR läuft (kann etwas dauern)…');
-  const T=await ensureTess(); return (await T.recognize(file,'deu')).data.text;
+  const T=await ensureTess(); return (await T.recognize(file,'deu',TESS_OPT)).data.text;
 }
 function redact(t){ return String(t)
   .replace(/\b[A-Z]{2}\d{2}(?:[ ]?\d){10,30}\b/g,'[IBAN]')
   .replace(/\b[A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b/g,'[BIC]')
   .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g,'[EMAIL]')
-  .replace(/(?:\+49|0)[\d \/().\-]{6,}\d/g,'[TEL]')
+  .replace(/(?<![\d.,])(?:\+49|0)[\d \/()\-]{6,}\d/g,'[TEL]') // ohne Punkt und nicht mitten in einer Zahl: Datum + Betrag ist keine Telefonnummer
   .replace(/\b(?:Herr|Frau|Hr\.|Fr\.)\s+[A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)?/g,'[NAME]')
   .replace(/\b(Kundennummer|Kunden-?Nr\.?|Darlehensnummer|Vertragsnummer|Konto(?:nummer)?)\s*[:\s]*[\w\/-]+/gi,'$1 [NR]'); }
 function parseDe(s){
   if(s==null) return null; s=(''+s).replace(/[^\d.,]/g,'');
   if(!s) return null;
   if(s.indexOf(',')>=0){ s=s.replace(/\./g,'').replace(',','.'); }
-  else { const p=s.split('.'); if(p.length>1 && p[p.length-1].length===3) s=p.join(''); }
+  else { const p=s.split('.');
+    if(p.length>1 && p[p.length-1].length===3) s=p.join('');
+    else if(p.length>2) s=p.slice(0,-1).join('')+'.'+p[p.length-1]; } // "1.706.25": Punkt statt Komma vor den Cent (OCR)
   const v=parseFloat(s); return isNaN(v)?null:v;
 }
-function findNum(t,res){ for(const re of res){ const m=t.match(re); if(m&&m[1]!=null){ const v=parseDe(m[1]); if(v!=null) return {v,mon:/Monat/i.test(m[0])}; } } return null; }
+function findNum(t,res){ for(const re of res){ const m=t.match(re); if(m&&m[1]!=null){ const v=parseDe(m[1]); if(v!=null) return {v,mon:/\d\s*Mon/i.test(m[0])}; } } return null; } // mon: Einheit direkt hinter der Zahl, nicht irgendein "Monat…" im Treffer
 function parseOffer(t){
-  t=String(t).replace(/\s+/g,' ');
+  t=String(t).replace(/\s+/g,' ')
+    // Datum bzw. "Nr. 2" direkt VOR einem Betrag mit Währung entfernen (sonst würde es zum Betrag gezogen);
+    // nur dort, damit ein Schlagwort nicht über das Datum hinweg die Zahl des nächsten Feldes greift
+    .replace(/\b(?:0?[1-9]|[12]\d|3[01])\.(?:0?[1-9]|1[0-2])\.(?:\d{4}|\d{2})?(?!\d)(?=\s*(?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?\s*(?:EUR|€))/gi,' ')
+    .replace(/\bNr\.?\s*\d{1,3}(?![\d.,])(?=\s*(?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?\s*(?:EUR|€))/gi,' ');
   const num=(res)=>{ const r=findNum(t,res); return r?r.v:null; };
   const d={};
   d.darlehen=num([
-    /Nettodarlehensbetrag[^0-9]{0,30}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
-    /Darlehens(?:nenn)?betrag[^0-9]{0,30}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
-    /Darlehenssumme[^0-9]{0,30}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
-    /(?:Finanzierungs(?:betrag|summe)|Kreditbetrag|Kreditsumme)[^0-9]{0,30}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
-    /(?:Nennbetrag|Nominalbetrag)(?:\s+des\s+Darlehens)?[^0-9]{0,22}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
-    /Darlehen[^0-9]{0,22}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i
+    /Nettodarlehensbetrag[^0-9]{0,30}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i,
+    /Darlehens(?:nenn)?betrag[^0-9]{0,30}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i,
+    /Darlehenssumme[^0-9]{0,30}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i,
+    /(?:Finanzierungs(?:betrag|summe)|Kreditbetrag|Kreditsumme)[^0-9]{0,30}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i,
+    /(?:Nennbetrag|Nominalbetrag)(?:\s+des\s+Darlehens)?[^0-9]{0,22}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i,
+    /Darlehen[^0-9]{0,22}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i
   ]);
   d.sollzins=num([
     /gebundener\s+Sollzins(?:satz)?[^0-9]{0,30}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i,
@@ -594,20 +607,22 @@ function parseOffer(t){
   ]);
   if(zb) d.zinsbindung = zb.mon ? Math.round(zb.v/12) : zb.v;
   d.monatsrate=num([
-    /(?:monatlich[a-z]*|mtl\.?|monatl\.?)\s*(?:Rate|Belastung)[^0-9]{0,18}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
-    /Monatsrate[^0-9]{0,18}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
-    /(?:Kreditrate|Annuit[äa]t)[^0-9]{0,18}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
-    /\bRate[^0-9]{0,14}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i
+    /(?:monatlich[a-z]*|mtl\.?|monatl\.?)\s*(?:Rate|Belastung)[^0-9]{0,18}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i,
+    /Monatsrate[^0-9]{0,18}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i,
+    /(?:Kreditrate|Annuit[äa]t)[^0-9]{0,18}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i,
+    /\bRate[^0-9]{0,14}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i
   ]);
   d.disagio=num([ /Disagio[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i, /Damnum[^0-9]{0,18}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i ]);
   if(d.disagio==null){ const ak=findNum(t,[ /Auszahlungs(?:kurs|wert)[^0-9]{0,18}(\d{2,3}(?:,\d+)?)\s*%/i, /Auszahlung[^0-9]{0,12}(\d{2,3}(?:,\d+)?)\s*%/i ]); if(ak && ak.v>=80 && ak.v<100) d.disagio=Math.round((100-ak.v)*100)/100; }
   d.gebuehr=num([
-    /Bearbeitungs(?:geb[üu]hr|entgelt|kosten)[^0-9]{0,18}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i,
-    /(?:Sch[äa]tz(?:kosten|geb[üu]hr)|Gutachterkosten|Wertermittlungskosten)[^0-9]{0,18}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i
+    /Bearbeitungs(?:geb[üu]hr|entgelt|kosten)[^0-9]{0,18}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i,
+    /(?:Sch[äa]tz(?:kosten|geb[üu]hr)|Gutachterkosten|Wertermittlungskosten)[^0-9]{0,18}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i
   ]);
-  const stE=findNum(t,[ /Sondertilgung[^0-9]{0,30}([\d][\d. ]{0,12}(?:,\d+)?)\s*(?:EUR|€)/i ]);
-  const stP=findNum(t,[ /Sondertilgung[^0-9%]{0,30}(\d{1,2}(?:,\d+)?)\s*(?:%|Prozent)/i ]);
-  if(stE) d.sondertilgung=stE.v; else if(stP && d.darlehen) d.sondertilgung=Math.round(d.darlehen*stP.v/100);
+  const stE=findNum(t,[ /Sondertilgung[^0-9]{0,30}((?:\d{1,3}(?: ?\. ?\d{3})+|\d{1,3}(?: \d{3})+|\d+)(?: ?[.,] ?\d{1,2})?)\s*(?:EUR|€)/i ]);
+  // Ein Sondertilgungsrecht ("bis zu 5 % p.a. möglich") ist keine geplante Zahlung und wird nicht übernommen;
+  // eine Prozentangabe ist praktisch immer ein Recht, deshalb wird nur ein Eurobetrag ohne Signalwort gelesen
+  const stRecht=/Sondertilgungs(?:recht|option)|Sondertilgung(?:en)?.{0,60}?(?:\bbis\b|maximal|max\.|m[öo]glich|kostenfrei|kostenlos|optional|zul[äa]ssig|berechtigt)/i.test(t);
+  if(!stRecht&&stE) d.sondertilgung=stE.v;
   const bn=t.match(/([A-ZÄÖÜ][A-Za-zÄÖÜäöüß.\-& ]{2,38}?(?:Sparkasse|Volksbank|Raiffeisenbank|PSD[\s-]?Bank|Sparda[\s-]?Bank|Bausparkasse|Hypothekenbank|Pfandbriefbank|Kreditbank|Bank|AG|eG))\b/);
   if(bn) d.name=bn[1].trim().replace(/\s+/g,' ');
   return d;
@@ -615,8 +630,8 @@ function parseOffer(t){
 function fillVariant(n,d){
   const set=(s,v)=>{ if(v!==null&&v!==undefined&&v!==''&&!isNaN(v)) $("v"+n+"_"+s).value=v; };
   if(d.name) $("v"+n+"_name").value=String(d.name).slice(0,40);
-  set('d',d.darlehen); set('sz',d.sollzins);
-  let tg=d.tilgung; if((tg==null||isNaN(tg))&&d.monatsrate&&d.darlehen&&d.sollzins) tg=d.monatsrate*12/d.darlehen*100-d.sollzins;
+  set('d',d.darlehen>0?d.darlehen:null); set('sz',d.sollzins); // Darlehen 0 ist ein Lesefehler
+  let tg=d.tilgung; if((tg==null||isNaN(tg))&&d.monatsrate&&d.darlehen&&d.sollzins){ tg=d.monatsrate*12/d.darlehen*100-d.sollzins; if(tg<=0||tg>20) tg=null; } // aus der Rate abgeleitet: nur plausible Werte
   set('tg', tg!=null&&!isNaN(tg)?Math.round(tg*100)/100:null);
   set('zb',d.zinsbindung); set('an',d.anschlusszins); set('so',d.sondertilgung); set('di',d.disagio); set('ge',d.gebuehr);
   $("v"+n+"_on").checked=true; render();

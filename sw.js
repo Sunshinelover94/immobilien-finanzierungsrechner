@@ -1,5 +1,5 @@
 /* Service Worker – Cache-First App-Shell (offline-fähig) */
-const CACHE = 'ifr-v7';
+const CACHE = 'ifr-v8';
 const ASSETS = [
   './', 'index.html', 'steuer.html', 'basis.html', 'vergleich.html',
   'xlsx.full.min.js',
@@ -24,16 +24,18 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-  // CDN-Bibliotheken (pdf.js/tesseract) und die Anthropic-API nicht abfangen/cachen
+  // nur eigene Dateien abfangen/cachen (PDF-Leser und Texterkennung liegen unter lib/ und werden beim ersten Import gecacht)
   if (new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
     caches.match(e.request).then((cached) =>
       cached ||
       fetch(e.request).then((resp) => {
-        const copy = resp.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        if (resp.ok) { // einen einmaligen Fehler (z. B. 404) nicht dauerhaft cachen
+          const copy = resp.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        }
         return resp;
-      }).catch(() => caches.match('index.html'))
+      }).catch(() => (e.request.mode === 'navigate' ? caches.match('index.html') : Response.error())) // Startseite nur als Ersatz für Seitenaufrufe, nicht für Skripte
     )
   );
 });

@@ -1,0 +1,19 @@
+Fremdbibliotheken in diesem Ordner (unverändert aus der npm-Registry übernommen)
+
+pdf.min.js, pdf.worker.min.js
+  Paket pdfjs-dist 3.11.174 (Mozilla PDF.js), Lizenz Apache-2.0
+  https://www.npmjs.com/package/pdfjs-dist/v/3.11.174
+
+tesseract/tesseract.min.js, tesseract/worker.min.js
+  Paket tesseract.js 5.1.1, Lizenz Apache-2.0
+  https://www.npmjs.com/package/tesseract.js/v/5.1.1
+
+tesseract/tesseract-core-lstm.wasm.js, tesseract/tesseract-core-simd-lstm.wasm.js
+  Paket tesseract.js-core 5.1.1, Lizenz Apache-2.0
+  https://www.npmjs.com/package/tesseract.js-core/v/5.1.1
+
+tesseract/deu.traineddata.gz
+  Paket @tesseract.js-data/deu 1.0.0 (Ordner 4.0.0_best_int), Lizenz MIT
+  https://www.npmjs.com/package/@tesseract.js-data/deu/v/1.0.0
+
+Lizenztext Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
