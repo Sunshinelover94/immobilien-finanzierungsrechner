@@ -327,7 +327,7 @@
       <p class="disclaimer">
         Vereinfachte Modellrechnung – <strong>keine Steuer- oder Finanzierungsberatung</strong>.
         Werbungskosten = Zinsen + lineare Gebäude-AfA + nicht umlagefähige Kosten (Tilgung nicht abziehbar).
-        Beim Verkauf erhöht die in Anspruch genommene AfA den Veräußerungsgewinn; nach 10 Jahren Haltedauer ist der Gewinn im Privatvermögen steuerfrei.
+        Beim Verkauf erhöht die in Anspruch genommene AfA den Veräußerungsgewinn; nach mehr als 10 Jahren Haltedauer ist der Gewinn im Privatvermögen steuerfrei.
         <strong>Nicht</strong> berücksichtigt: Erhaltungs-/Herstellungsaufwand-Abgrenzung, Progressionsänderungen, degressive AfA, Vorfälligkeitsentschädigung als Detailgröße, Verlustverrechnungsbeschränkungen.
         Soli/Kirchensteuer vereinfacht als Zuschlag. Restnutzungsdauer-Gutachten muss vom Finanzamt anerkannt werden. Alle Annahmen vor Verwendung prüfen.
       </p>
@@ -339,7 +339,7 @@
 "use strict";
 
 const GREST = {
-  "Baden-Württemberg":5.0,"Bayern":3.5,"Berlin":6.0,"Brandenburg":6.5,"Bremen":5.0,
+  "Baden-Württemberg":5.0,"Bayern":3.5,"Berlin":6.0,"Brandenburg":6.5,"Bremen":5.5,
   "Hamburg":5.5,"Hessen":6.0,"Mecklenburg-Vorpommern":6.0,"Niedersachsen":5.0,
   "Nordrhein-Westfalen":6.5,"Rheinland-Pfalz":5.0,"Saarland":6.5,"Sachsen":5.5,
   "Sachsen-Anhalt":5.0,"Schleswig-Holstein":6.5,"Thüringen":5.0
@@ -373,9 +373,9 @@ function tilgungsplan(darlehen,sollzinsP,tilgungP,sonder){
   const rm=ann/12;
   const jahre=[]; let rest=darlehen,m=0,jZ=0,jT=0,jS=0;
   if(darlehen<=0) return {jahre,rm:0,getilgt:true};
-  if(rm<=darlehen*zm||rm<=0) return {jahre,rm,getilgt:false};
+  if(tilgungP<0||rm<0) return {jahre,rm,getilgt:false};
   while(rest>0.005&&m<60*12){
-    const z=rest*zm; let t=rm-z; if(t>rest)t=rest; rest-=t; jZ+=z; jT+=t; m++;
+    const z=rest*zm; let t=rm-z; if(t<0)t=0; if(t>rest)t=rest; rest-=t; jZ+=z; jT+=t; m++;
     if(m%12===0||rest<=0.005){
       if(rest>0.005&&sonder>0){const s=Math.min(sonder,rest);rest-=s;jS+=s;}
       jahre.push({jahr:Math.ceil(m/12),zins:jZ,tilgung:jT,sonder:jS,restschuld:Math.max(0,rest)});
@@ -413,7 +413,7 @@ function berechne(){
   const rows=[]; let cumStd=0,cumGut=0;
   for(let y=1;y<=N;y++){
     const pj=plan.jahre[y-1];
-    const zins=pj?pj.zins:0, tilg=pj?pj.tilgung:0, rest=pj?pj.restschuld:0;
+    const zins=pj?pj.zins:0, tilg=pj?pj.tilgung+pj.sonder:0, rest=pj?pj.restschuld:0; // Tilgung inkl. Sondertilgung
     const miete=miete0*Math.pow(1+g,y-1);
     const cfVor=miete-(zins+tilg)-kostenJ;
     const afaStd=Math.min(afaStdJahr,Math.max(0,afaBasis-cumStd)); cumStd+=afaStd;
@@ -500,7 +500,8 @@ function render(){
   $("verkaufCard").style.display=k.sale?"":"none";
 
   const warn=[];
-  if(!k.plan.getilgt&&k.darlehen>0) warn.push("Die Rate deckt die Zinsen nicht – bitte Tilgung erhöhen.");
+  if(!k.plan.jahre.length&&k.darlehen>0) warn.push("Die Rate deckt die Zinsen nicht – bitte Tilgung erhöhen.");
+  if(!k.plan.getilgt&&k.plan.jahre.length) warn.push("Mit dieser Tilgung ist das Darlehen nach 60 Jahren nicht zurückgezahlt.");
   if(k.darlehen<=0) warn.push("Kein Darlehen erforderlich (Eigenkapital ≥ Gesamtinvestition).");
   if(k.bodenwert>=k.nk.kaufpreis) warn.push("Bodenwert ≥ Kaufpreis – Gebäudeanteil 0 %, keine AfA. Fläche/Bodenrichtwert prüfen.");
   $("warnung").innerHTML=warn.map(t=>`<div class="warn-box">⚠️ ${t}</div>`).join("");
@@ -556,6 +557,10 @@ function render(){
     }
     $("kpiVerkauf").innerHTML=html;
     let hinweis="";
+    const fristHinweis=(s.spekStd>0||s.spekGut>0)
+      ? ` Bei einem Verkauf ab Jahr 11 (mehr als zehn Jahre Haltedauer) entfiele die Spekulationssteuer von <strong>${eur0.format(s.spekStd)}</strong>${gut?` (Gutachten: ${eur0.format(s.spekGut)})`:""}.`+
+        (s.vj===10?" Jahr 10 steht für den Verkauf zum Ende des zehnten Jahres, also genau zehn Jahre Haltedauer – das liegt noch innerhalb der Frist (§ 23 EStG).":"")
+      : "";
     if(s.frei){
       hinweis=`✓ Verkauf nach ${s.vj} Jahren (mehr als 10 J. Haltedauer): Veräußerungsgewinn im Privatvermögen <strong>steuerfrei</strong> – keine Spekulationssteuer.`;
     } else if(gut){
@@ -564,7 +569,7 @@ function render(){
     } else {
       hinweis=`⚠️ Verkauf in Jahr ${s.vj} – innerhalb der 10-jährigen Spekulationsfrist: Veräußerungsgewinn ist steuerpflichtig.`;
     }
-    $("spekHinweis").innerHTML=`<div class="info-box">${hinweis}</div>`;
+    $("spekHinweis").innerHTML=`<div class="info-box">${hinweis}${fristHinweis}</div>`;
   }
 
   renderTabelle(k,gut);
@@ -572,7 +577,7 @@ function render(){
 }
 
 function renderTabelle(k,gut){
-  let head=`<tr><th>Jahr</th><th>Miete</th><th>Zins</th><th>Tilgung</th><th>n.uml. Kosten</th><th>CF vor St.</th>`+
+  let head=`<tr><th>Jahr</th><th>Miete</th><th>Zins</th><th>Tilgung inkl. Sondertilg.</th><th>n.uml. Kosten</th><th>CF vor St.</th>`+
            `<th>AfA Std</th><th>St.-Erg. Std</th><th>Steuer Std</th><th>CF n.St. Std</th>`;
   if(gut) head+=`<th class="gutcol">AfA Gut.</th><th class="gutcol">St.-Erg. Gut.</th><th class="gutcol">Steuer Gut.</th><th class="gutcol">CF n.St. Gut.</th>`;
   head+=`</tr>`;
@@ -629,7 +634,7 @@ function zeichneChart(k,gut){
 function exportCSV(){
   const k=LAST||berechne(); const gut=k.gutAn;
   const de=(v)=>v.toFixed(2).replace(".",",");
-  let head=["Jahr","Miete","Zins","Tilgung","Nicht uml. Kosten","CF vor Steuern","AfA Std","St.-Ergebnis Std","Steuer Std","CF nach Steuern Std"];
+  let head=["Jahr","Miete","Zins","Tilgung inkl. Sondertilg.","Nicht uml. Kosten","CF vor Steuern","AfA Std","St.-Ergebnis Std","Steuer Std","CF nach Steuern Std"];
   if(gut) head=head.concat(["AfA Gutachten","St.-Ergebnis Gutachten","Steuer Gutachten","CF nach Steuern Gutachten"]);
   const lines=[head.join(";")];
   for(const r of k.rows){

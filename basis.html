@@ -223,7 +223,7 @@ const GREST = {
   "Bayern": 3.5,
   "Berlin": 6.0,
   "Brandenburg": 6.5,
-  "Bremen": 5.0,
+  "Bremen": 5.5,
   "Hamburg": 5.5,
   "Hessen": 6.0,
   "Mecklenburg-Vorpommern": 6.0,
@@ -278,7 +278,7 @@ function berechneTilgungsplan(darlehen, sollzinsP, tilgungP, sondertilgung) {
   const maxMonate = 60 * 12;
   let m = 0;
 
-  if (rateMonat <= darlehen * zinsMonat || rateMonat <= 0) {
+  if (tilgungP < 0 || rateMonat < 0) {
     // Rate deckt die Zinsen nicht -> keine Tilgung möglich
     return { jahre, annuitaet, rateMonat, getilgt: false, restschuld };
   }
@@ -288,6 +288,7 @@ function berechneTilgungsplan(darlehen, sollzinsP, tilgungP, sondertilgung) {
   while (restschuld > 0.005 && m < maxMonate) {
     const zins = restschuld * zinsMonat;
     let tilgung = rateMonat - zins;
+    if (tilgung < 0) tilgung = 0; // Tilgung 0 %: Rundungsrest der Gleitkommarechnung
     if (tilgung > restschuld) tilgung = restschuld;
     restschuld -= tilgung;
     jahrZins += zins;
@@ -358,13 +359,16 @@ function render() {
   // Warnungen
   const w = $("warnung");
   const warnungen = [];
-  if (!k.plan.getilgt && k.darlehen > 0) {
+  if (!k.plan.jahre.length && k.darlehen > 0) {
     warnungen.push("Die monatliche Rate deckt die Zinsen nicht – mit dieser Tilgung erfolgt keine Rückzahlung. Bitte Tilgung erhöhen.");
+  }
+  if (!k.plan.getilgt && k.plan.jahre.length && k.tilgungP > 0) {
+    warnungen.push("Mit dieser Tilgung ist das Darlehen nach 60 Jahren nicht zurückgezahlt – der Tilgungsplan endet dort.");
   }
   if (k.darlehen <= 0) {
     warnungen.push("Eigenkapital deckt die Gesamtinvestition vollständig – kein Darlehen erforderlich.");
   }
-  if (k.tilgungP === 0 && k.darlehen > 0) {
+  if (k.tilgungP === 0 && k.darlehen > 0 && !k.plan.getilgt) {
     warnungen.push("Anfängliche Tilgung ist 0 % – ohne Tilgung läuft das Darlehen endlos.");
   }
   w.innerHTML = warnungen.length ? warnungen.map(t => `<div class="warn-box">⚠️ ${t}</div>`).join("") : "";

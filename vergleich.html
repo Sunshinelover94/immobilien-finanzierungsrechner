@@ -124,6 +124,7 @@
           <option value="abfluss">niedrigster Liquiditäts-Abfluss</option>
           <option value="irr">höchste Rendite (IRR)</option>
         </select></div>
+      <div class="field"><label class="lab" for="vkAktiv"><input type="checkbox" id="vkAktiv" style="width:auto;vertical-align:middle;"> Verkaufskosten einrechnen</label><div class="il"><input type="number" id="verkaufskosten" value="3" min="0" step="0.1"><span class="unit">%</span></div></div>
     </div>
   </div>
 
@@ -150,6 +151,7 @@
     <h2>Vergleichstabelle</h2>
     <div style="overflow-x:auto;"><table id="vtab"></table></div>
     <div class="info-box" id="stressbox"></div>
+    <div class="info-box" id="verkaufHinweis"></div>
   </div>
 
   <!-- Diagramme -->
@@ -158,9 +160,9 @@
     <div class="charts">
       <div><div class="metric">Cashflow vor Steuern pro Jahr</div><div id="chartCfVor"></div><div class="legend" id="legCfVor"></div></div>
       <div><div class="metric">Cashflow nach Steuern pro Jahr</div><div id="chartCfNach"></div></div>
-      <div><div class="metric">Vermögen (kumuliert) = Immobilienwert − Restschuld + kum. Nachsteuer-Cashflow − Eigenkapital</div><div id="chartVerm"></div></div>
+      <div><div class="metric">Vermögen bei Verkauf im jeweiligen Jahr = Immobilienwert − Verkaufskosten − Steuer auf Veräußerungsgewinn − Restschuld + kum. Nachsteuer-Cashflow − Eigenkapital</div><div id="chartVerm"></div></div>
     </div>
-    <p class="disclaimer">Vereinfachte Modellrechnung – keine Steuer-, Rechts- oder Finanzierungsberatung. Effektivzins ist eine Näherung über die Zinsbindung (inkl. Disagio/Gebühren); IRR inkl. Wertzuwachs und fiktivem Verkauf am Ende (ohne Verkaufskosten/Spekulationssteuer). Annahmen vor Verwendung prüfen.</p>
+    <p class="disclaimer">Vereinfachte Modellrechnung – keine Steuer-, Rechts- oder Finanzierungsberatung. Effektivzins ist eine Näherung über die Zinsbindung (inkl. Disagio/Gebühren); IRR und Vermögen inkl. Wertzuwachs und fiktivem Verkauf am Ende; bei Kapitalanlage im Privatvermögen mit Steuer auf den Veräußerungsgewinn bei Verkauf innerhalb von zehn Jahren (Grenzsteuersatz, ohne Soli/Kirchensteuer), Verkaufskosten nur bei gesetztem Klickfeld. Nicht abgebildet: gewerblicher Grundstückshandel und Gesellschaften (Fix &amp; Flip). Annahmen vor Verwendung prüfen.</p>
   </div>
 </div>
 
@@ -228,19 +230,19 @@ $("varianten").innerHTML=[0,1,2].map(vcard).join("");
 
 /* ---------- Rechen-Engine ---------- */
 function amortize(betrag,sz,tg,zb,an,so,T){
-  const out=[]; if(betrag<=0){ for(let y=0;y<T;y++) out.push({zins:0,tilg:0,rest:0}); return {jahre:out,rateM:0}; }
+  const out=[], zahl=[]; if(betrag<=0){ for(let y=0;y<T;y++) out.push({zins:0,tilg:0,rest:0}); return {jahre:out,rateM:0,zahl}; }
   let rest=betrag; const rateM=betrag*(sz+tg)/100/12; let yZ=0,yT=0;
   for(let m=1;m<=T*12;m++){
     const eff=(m<=zb*12)?sz:an;
     const zM=rest*eff/100/12; let tM=rateM-zM; if(tM<0)tM=0; if(tM>rest)tM=rest;
-    rest-=tM; yZ+=zM; yT+=tM;
-    if(m%12===0){ if(rest>0&&so>0){const s=Math.min(so,rest); rest-=s; yT+=s;} out.push({zins:yZ,tilg:yT,rest:Math.max(0,rest)}); yZ=0;yT=0; }
+    rest-=tM; yZ+=zM; yT+=tM; zahl.push(zM+tM);
+    if(m%12===0){ if(rest>0&&so>0){const s=Math.min(so,rest); rest-=s; yT+=s; zahl[m-1]+=s;} out.push({zins:yZ,tilg:yT,rest:Math.max(0,rest)}); yZ=0;yT=0; }
   }
-  return {jahre:out,rateM};
+  return {jahre:out,rateM,zahl}; // zahl = tatsächliche Monatszahlungen inkl. Sondertilgung
 }
-function effZinsAnnual(auszahlung,rateM,nMon,restEnd){
-  if(auszahlung<=0||rateM<=0||nMon<=0) return null;
-  const f=(i)=>{let s=0; for(let m=1;m<=nMon;m++) s+=rateM/Math.pow(1+i,m); s+=restEnd/Math.pow(1+i,nMon); return s-auszahlung;};
+function effZinsAnnual(auszahlung,zahl,nMon,restEnd){
+  if(auszahlung<=0||nMon<=0) return null;
+  const f=(i)=>{let s=0; for(let m=1;m<=nMon;m++) s+=(zahl[m-1]||0)/Math.pow(1+i,m); s+=restEnd/Math.pow(1+i,nMon); return s-auszahlung;};
   let lo=1e-7, hi=0.05, flo=f(lo), fhi=f(hi); if(flo*fhi>0) return null;
   for(let k=0;k<200;k++){const mid=(lo+hi)/2,fm=f(mid); if(flo*fm<=0){hi=mid;}else{lo=mid;flo=fm;}}
   return (Math.pow(1+(lo+hi)/2,12)-1)*100;
@@ -263,7 +265,8 @@ function readShared(){
   const effRate=num("grenzsteuer")/100;
   const miete0=num("miete")*12, gm=num("mietsteigerung")/100, kostenJ=num("kosten")*12;
   const stressMode=$("stressMode").value, stressWert=num("stressWert");
-  return {ka,kaufpreis,gesamt,T,gw,afaBasis,afaJahr,effRate,miete0,gm,kostenJ,stressMode,stressWert};
+  const vkP=$("vkAktiv").checked?Math.max(0,num("verkaufskosten"))/100:0;
+  return {ka,kaufpreis,gesamt,T,gw,afaBasis,afaJahr,effRate,miete0,gm,kostenJ,stressMode,stressWert,vkP};
 }
 function readVariant(n){
   const g=(s)=>num("v"+n+"_"+s);
@@ -296,24 +299,37 @@ function computeVariant(S,v){
       cfVor=-(zins+tilg)-up; steuer=0; cfNach=cfVor;
     }
     sumSteuer+=steuer; kum+=cfNach;
-    rows.push({y,zins,tilg,rest,immo,cfVor,cfNach,kum,vermoegen:immo-rest+kum-ek0});
+    // Verkauf zum Ende von Jahr y: Verkaufskosten und Steuer auf den Veräußerungsgewinn
+    // (Kapitalanlage im Privatvermögen: steuerpflichtig bis einschließlich Jahr 10; AfA erhöht den Gewinn)
+    const vk=immo*S.vkP;
+    const spek=(S.ka&&y<=10)?S.effRate*Math.max(0,immo-vk-(S.gesamt-cumAfa)):0;
+    rows.push({y,zins,tilg,rest,immo,cfVor,cfNach,kum,vk,spek,vermoegen:immo-vk-spek-rest+kum-ek0});
   }
   const zbIdx=Math.min(T,Math.max(1,Math.round(v.zb)));
   const restNachZb=rows[zbIdx-1].rest;
   const restEnde=rows[T-1].rest;
   const auszahlung=darlehen-disagio-gebuehr;
-  const eff=effZinsAnnual(auszahlung,rateStart,zbIdx*12,restNachZb);
-  const cfs=[-ek0]; for(let y=1;y<=T;y++){let c=rows[y-1].cfNach; if(y===T)c+=rows[y-1].immo-rows[y-1].rest; cfs.push(c);}
+  const zahl=[]; for(let m=0;m<zbIdx*12;m++) zahl.push(am.reduce((a,x)=>a+(x.zahl[m]||0),0));
+  const eff=effZinsAnnual(auszahlung,zahl,zbIdx*12,restNachZb);
+  const cfs=[-ek0]; for(let y=1;y<=T;y++){let c=rows[y-1].cfNach; if(y===T)c+=rows[y-1].immo-rows[y-1].vk-rows[y-1].spek-rows[y-1].rest; cfs.push(c);}
   const irr=irrAnnual(cfs);
   // Stress
   const stressZins=(S.stressMode==="fix")?S.stressWert:(v.sz+S.stressWert);
-  const rateNachZbBase=restNachZb*(v.an+v.tg)/100/12;
-  const rateNachZbStress=restNachZb*(stressZins+v.tg)/100/12;
+  // Gesamtrate nach jedem Zinsbindungsende: die auslaufende Tranche wird auf ihre Restschuld neu gerechnet
+  // (eigene Konditionen), eine noch gebundene Tranche behält ihre Rate, eine getilgte Tranche zählt nicht mehr.
+  // Endet keine Zinsbindung im Betrachtungszeitraum, wird wie bisher zu dessen Ende gerechnet (jahr:null).
+  const zbR=(t)=>Math.max(1,Math.round(t.zb)), zbT=(t)=>Math.min(T,zbR(t));
+  let enden=[...new Set(v.tr.filter(t=>t.betrag>0&&zbR(t)<=T).map(zbR))].sort((a,b)=>a-b);
+  const ohneEnde=!enden.length; if(ohneEnde) enden=[zbIdx];
+  const rateNeu=(t,i,stress)=>am[i].jahre[zbT(t)-1].rest*((stress?((S.stressMode==="fix")?S.stressWert:(t.sz+S.stressWert)):t.an)+t.tg)/100/12;
+  const rateAb=(e,stress)=>v.tr.reduce((a,t,i)=>a+(am[i].jahre[e-1].rest<=0?0:((ohneEnde||zbR(t)<=e)?rateNeu(t,i,stress):am[i].rateM)),0);
+  const stressEvents=enden.map(e=>({jahr:ohneEnde?null:e,base:rateAb(e,false),stress:rateAb(e,true)}));
   return {v,darlehen,ek0,rateStart,rows,
     sumCfVor:rows.reduce((a,r)=>a+r.cfVor,0),
     sumCfNach:rows.reduce((a,r)=>a+r.cfNach,0),
     kumSteuerersparnis:-sumSteuer, restNachZb, restEnde, eff, irr,
-    vermoegenEnde:rows[T-1].vermoegen, stressZins, rateNachZbBase, rateNachZbStress, T, zbIdx};
+    vkEnde:rows[T-1].vk, spekEnde:rows[T-1].spek,
+    vermoegenEnde:rows[T-1].vermoegen, stressZins, stressEvents, T, zbIdx};
 }
 
 /* ---------- Diagramm ---------- */
@@ -346,6 +362,12 @@ function render(){
   const S=readShared();
   document.querySelectorAll(".ka-only").forEach(e=>e.classList.toggle("hide",!S.ka));
   $("stressLab").textContent=($("stressMode").value==="fix")?"Fixer Anschlusszins":"Aufschlag (%-Punkte)";
+  $("verkaufHinweis").innerHTML="ℹ️ <b>Vermögen und IRR</b> unterstellen einen Verkauf zum Ende des Betrachtungszeitraums. "+
+    (S.vkP>0?`Verkaufskosten von ${pct(S.vkP*100)} des Verkaufspreises sind eingerechnet. `:"Verkaufskosten sind nicht eingerechnet. ")+
+    (!S.ka?"Bei Eigennutzung rechnet die Seite keine Steuer auf den Veräußerungsgewinn."
+      :S.T<=10?`Nach ${S.T===1?"einem Jahr":S.T+" Jahren"} liegt der Verkauf innerhalb der zehnjährigen Spekulationsfrist: Die Steuer auf den Veräußerungsgewinn ist mit dem Grenzsteuersatz eingerechnet (die AfA erhöht den Gewinn).`
+      :"Nach mehr als zehn Jahren Haltedauer fällt im Privatvermögen keine Steuer auf den Veräußerungsgewinn an; im Diagramm sind die Jahre 1 bis 10 mit dieser Steuer gerechnet.")+
+    ` Mit Soli, Kirchensteuer und Gutachten-AfA: <a href="steuer.html">Steuer-, AfA- &amp; Verkaufsrechner</a>.`;
   // variant dim styling
   [1,2,3].forEach(n=>$("vcard"+n).classList.toggle("vdis",!$("v"+n+"_on").checked));
 
@@ -359,7 +381,7 @@ function render(){
   const fmtRow=(label,vals,better,fmtFn)=>{
     const nums=vals.map(x=>(x==null?null:x));
     let bestIdx=-1; const valid=nums.map((x,i)=>({x,i})).filter(o=>o.x!=null);
-    if(valid.length){ bestIdx=(better==="hi"?valid.reduce((a,b)=>b.x>a.x?b:a):valid.reduce((a,b)=>b.x<a.x?b:a)).i; }
+    if(valid.length&&better){ bestIdx=(better==="hi"?valid.reduce((a,b)=>b.x>a.x?b:a):valid.reduce((a,b)=>b.x<a.x?b:a)).i; }
     const tds=nums.map((x,i)=>`<td class="${i===bestIdx?'best':''}">${x==null?"–":fmtFn(x)}</td>`).join("");
     return `<tr><td class="metric">${label}</td>${tds}</tr>`;
   };
@@ -378,13 +400,15 @@ function render(){
   } else {
     body+=fmtRow("Σ Liquiditäts-Abfluss",res.map(r=>r.sumCfVor),"hi",eK);
   }
+  if(S.vkP>0) body+=fmtRow("Verkaufskosten (Verkauf Jahr "+S.T+")",res.map(r=>r.vkEnde),null,eK);
+  if(S.ka) body+=fmtRow("Steuer auf Veräußerungsgewinn (Verkauf Jahr "+S.T+")",res.map(r=>r.spekEnde),null,eK);
   body+=fmtRow("IRR (Eigenkapitalrendite)",res.map(r=>r.irr),"hi",eP);
   body+=fmtRow("Vermögen am Ende",res.map(r=>r.vermoegenEnde),"hi",eK);
   $("vtab").innerHTML=`<thead><tr><th>Kennzahl</th>${cols}</tr></thead><tbody>${body}</tbody>`;
 
   // Stress-Box
-  const stressTxt=res.map((r,i)=>`<b style="color:${VHEX[variants[i].n-1]}">${r.v.name}</b>: Rate n. Zinsbindung Basis ${eur.format(r.rateNachZbBase)} → Stress (${($("stressMode").value==="fix")?"fix "+pct(r.stressZins):"+"+pct(S.stressWert)}) ${eur.format(r.rateNachZbStress)}`).join(" &nbsp;·&nbsp; ");
-  $("stressbox").innerHTML="⚠️ <b>Zinsänderungs-Stress</b> (Rate auf Restschuld bei gleicher Tilgung %): "+stressTxt;
+  const stressTxt=res.map((r,i)=>`<b style="color:${VHEX[variants[i].n-1]}">${r.v.name}</b>: `+r.stressEvents.map(e=>`${(r.v.tr.length>1&&e.jahr)?`nach ${e.jahr} J.: `:""}Rate n. Zinsbindung Basis ${eur.format(e.base)} → Stress (${($("stressMode").value==="fix")?"fix "+pct(r.stressZins):"+"+pct(S.stressWert)}) ${eur.format(e.stress)}`).join("; ")).join(" &nbsp;·&nbsp; ");
+  $("stressbox").innerHTML="⚠️ <b>Zinsänderungs-Stress</b> (Rate auf Restschuld bei gleicher Tilgung %; bei zwei Tranchen Gesamtrate je Zinsbindungsende, eine noch gebundene Tranche behält ihre Rate): "+stressTxt;
 
   // Charts
   const years=res[0].rows.map(r=>r.y);
@@ -435,6 +459,7 @@ function exportCSV(){
   add("Monatsrate Start",res.map(r=>r.rateStart)); add("Effektivzins %",res.map(r=>r.eff));
   add("Restschuld n. Zinsbindung",res.map(r=>r.restNachZb)); add("Restschuld Ende",res.map(r=>r.restEnde));
   add("Summe CF vor Steuern",res.map(r=>r.sumCfVor)); add("Summe CF nach Steuern",res.map(r=>r.sumCfNach));
+  if(S.vkP>0) add("Verkaufskosten Ende",res.map(r=>r.vkEnde)); if(S.ka) add("Steuer Veraeusserungsgewinn Ende",res.map(r=>r.spekEnde));
   add("IRR %",res.map(r=>r.irr)); add("Vermoegen Ende",res.map(r=>r.vermoegenEnde));
   L.push(""); L.push("Jahr;"+res.map(r=>r.v.name+" CF n.St.;"+r.v.name+" Vermoegen").join(";"));
   for(let y=0;y<S.T;y++){ L.push([y+1,...res.flatMap(r=>[de(r.rows[y].cfNach),de(r.rows[y].vermoegen)])].join(";")); }
@@ -459,6 +484,8 @@ async function exportXLSX(){
     ['Summe Cashflow nach Steuern',res.map(r=>r.sumCfNach),EUR],
     ['kum. Steuerersparnis',res.map(r=>r.kumSteuerersparnis),EUR]); }
   else { rd.push(['Summe Liquiditäts-Abfluss',res.map(r=>r.sumCfVor),EUR]); }
+  if(S.vkP>0) rd.push(['Verkaufskosten (Verkauf Jahr '+S.T+')',res.map(r=>r.vkEnde),EUR]);
+  if(S.ka) rd.push(['Steuer auf Veräußerungsgewinn (Verkauf Jahr '+S.T+')',res.map(r=>r.spekEnde),EUR]);
   rd.push(['IRR (Eigenkapitalrendite)',res.map(r=>r.irr),PCT],['Vermögen am Ende',res.map(r=>r.vermoegenEnde),EUR]);
   const aoa=[['Kennzahl',...res.map(r=>r.v.name)], ...rd.map(x=>[x[0],...x[1].map(v=>v==null?null:Math.round(v*100)/100)])];
   const ws=X.utils.aoa_to_sheet(aoa);
@@ -473,7 +500,7 @@ async function exportXLSX(){
   ws2['!cols']=[{wch:6},...Array(jh.length-1).fill({wch:17})];
   // Blatt 3: Eingaben
   const ea=[['Gemeinsame Annahmen',''],['Nutzung',S.ka?'Kapitalanlage':'Eigennutzung'],
-    ['Kaufpreis',S.kaufpreis],['Gesamtinvestition',Math.round(S.gesamt)],['Betrachtungszeitraum (J.)',S.T],['Wertsteigerung p.a. (%)',S.gw*100]];
+    ['Kaufpreis',S.kaufpreis],['Gesamtinvestition',Math.round(S.gesamt)],['Betrachtungszeitraum (J.)',S.T],['Wertsteigerung p.a. (%)',S.gw*100],['Verkaufskosten (%)',S.vkP*100]];
   if(S.ka) ea.push(['Kaltmiete / Monat',Math.round(S.miete0/12)],['Mietsteigerung (%)',S.gm*100],['AfA-Basis',Math.round(S.afaBasis)],['AfA / Jahr',Math.round(S.afaJahr)],['Grenzsteuersatz (%)',S.effRate*100]);
   ea.push(['',''],['Variante','Darlehen','Sollzins (%)','Tilgung (%)','Zinsbindung (J.)','Anschlusszins (%)']);
   res.forEach(r=>{ const t=r.v.tr[0]; ea.push([r.v.name,r.darlehen,t.sz,t.tg,t.zb,t.an]); });
