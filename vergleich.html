@@ -539,7 +539,8 @@ async function fileToText(file,setStatus){
   const isPdf=(file.type==='application/pdf'||/\.pdf$/i.test(file.name));
   if(isPdf){
     setStatus('PDF wird gelesen…');
-    const pdfjs=await ensurePdf(); const pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;
+    // isEvalSupported:false: pdf.js 3.11 würde sonst Schriftzeichen über new Function zeichnen; ein präpariertes PDF könnte so Skript ausführen (CVE-2024-4367)
+    const pdfjs=await ensurePdf(); const pdf=await pdfjs.getDocument({data:await file.arrayBuffer(),isEvalSupported:false}).promise;
     let txt=''; for(let p=1;p<=pdf.numPages;p++){ const pg=await pdf.getPage(p); const c=await pg.getTextContent(); txt+=c.items.map(i=>i.str).join(' ')+'\n'; }
     if(txt.replace(/\s/g,'').length>120) return txt;
     setStatus('Scan erkannt – OCR läuft (kann etwas dauern)…');
