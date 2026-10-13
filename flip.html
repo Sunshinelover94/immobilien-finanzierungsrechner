@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a2332">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Fix-&-Flip-Rechner – GmbH / Aufteiler</title>
+<style>
+  :root{
+    --navy:#1a2332; --teal:#2d8b8b; --amber:#c0743a; --seafoam:#a8dadc; --cream:#f1faee;
+    --bg:#eef4f4; --card:#fff; --ink:#1b2a33; --muted:#5d7682; --line:#dbe7e6; --accent-soft:#e3f1f0;
+    --good:#2f8f76; --bad:#c0556b; --warn:#b4790f;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:"Segoe UI",Roboto,Arial,sans-serif; color:var(--ink); line-height:1.5;
+    background:radial-gradient(1200px 500px at 80% -10%,#dfeeed 0%,rgba(223,238,237,0) 60%),var(--bg);
+    -webkit-font-smoothing:antialiased;}
+  header{background:linear-gradient(135deg,#1a2332 0%,#245b63 55%,#2d8b8b 100%); color:var(--cream);
+    padding:24px 26px; position:relative; overflow:hidden;}
+  header::after{content:""; position:absolute; right:-40px; top:-60px; width:220px; height:220px;
+    background:radial-gradient(circle,rgba(168,218,220,.25),rgba(168,218,220,0) 70%); border-radius:50%;}
+  header h1{margin:0; font-size:1.4rem; font-weight:800;}
+  header p{margin:6px 0 0; color:var(--seafoam); font-size:.85rem;}
+  header a.back{color:var(--seafoam); font-size:.8rem; text-decoration:none; position:relative;}
+  .wrap{max-width:1240px; margin:0 auto; padding:22px 18px 50px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(26,35,50,.04),0 14px 30px -18px rgba(26,35,50,.22);}
+  .card h2{margin:0 0 14px; font-size:1.02rem; color:var(--navy); font-weight:700; padding:0 0 8px 12px;
+    border-bottom:2px solid var(--accent-soft); position:relative;}
+  .card h2::before{content:""; position:absolute; left:0; top:1px; bottom:8px; width:4px; border-radius:3px;
+    background:linear-gradient(var(--teal),var(--navy));}
+  .grid{display:grid; gap:14px;}
+  .g3{grid-template-columns:repeat(3,1fr);} .g2{grid-template-columns:1fr 1fr;} .g4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:760px){.g3,.g4{grid-template-columns:1fr 1fr;}}
+  @media(max-width:520px){.g2,.g3,.g4{grid-template-columns:1fr;}}
+  .field{margin-bottom:10px;}
+  label.lab{display:block; font-size:.7rem; color:var(--muted); margin-bottom:3px; text-transform:uppercase; letter-spacing:.03em; font-weight:600;}
+  .il{display:flex; align-items:center; gap:6px;}
+  input[type=number],input[type=month],select,input[type=text]{width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:9px;
+    font-size:.92rem; font-family:inherit; background:#fbfdfd; color:var(--ink); transition:border-color .15s,box-shadow .15s;}
+  input:focus,select:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(45,139,139,.16); background:#fff;}
+  .unit{font-size:.82rem; color:var(--muted); min-width:26px;}
+  .hide{display:none!important;}
+  table{width:100%; border-collapse:separate; border-spacing:0; font-size:.85rem;}
+  th,td{padding:8px 10px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{background:var(--accent-soft); color:#1d5e5e; font-size:.72rem; text-transform:uppercase; letter-spacing:.03em;}
+  tbody tr:hover{background:#f6fbfb;}
+  tr.sum td{font-weight:700; border-top:2px solid var(--line);}
+  #unitTable td{padding:4px 6px;} #unitTable input{padding:6px 8px; font-size:.86rem; min-width:80px;}
+  #unitTable input.u-name{min-width:110px;}
+  button.mini{background:#fff; color:var(--bad); border:1px solid var(--line); border-radius:8px; padding:4px 8px; cursor:pointer; font-size:.8rem;}
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px;}
+  @media(max-width:760px){.kpis{grid-template-columns:1fr 1fr;}}
+  .kpi{background:linear-gradient(135deg,#1a2332,#2d8b8b); color:#fff; border-radius:14px; padding:14px 16px;}
+  .kpi .l{font-size:.72rem; opacity:.85; text-transform:uppercase; letter-spacing:.03em;}
+  .kpi .v{font-size:1.25rem; font-weight:800; margin-top:4px;}
+  .kpi .s{font-size:.78rem; opacity:.85; margin-top:2px;}
+  .kpi.neg{background:linear-gradient(135deg,#6b2a38,#c0556b);}
+  .metric{color:var(--muted); font-size:.78rem;}
+  .note{font-size:.78rem; color:var(--muted); margin-top:8px;}
+  .info-box{background:#e6f3f3; border:1px solid #b9dede; color:#1d5e5e; border-radius:10px; padding:10px 13px; font-size:.82rem; margin-top:10px;}
+  .warn-box{background:#fdf3e3; border:1px solid #efd3a3; color:#7a4e07; border-radius:10px; padding:10px 13px; font-size:.82rem; margin-top:10px;}
+  .btnbar{display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; margin-bottom:18px;}
+  button.act{background:linear-gradient(135deg,#2d8b8b,#237a7a); color:#fff; border:none; border-radius:10px; padding:10px 16px;
+    font-size:.9rem; font-weight:600; cursor:pointer; box-shadow:0 8px 18px -10px rgba(45,139,139,.7);}
+  button.act.alt{background:linear-gradient(135deg,#1a2332,#2c3e52);}
+  button.act.soft{background:#fff; color:var(--teal); border:1px solid var(--teal); box-shadow:none; padding:8px 12px; font-size:.84rem;}
+  .pos{color:var(--good);} .neg{color:var(--bad);}
+  .disclaimer{font-size:.74rem; color:var(--muted); border-top:1px solid var(--line); margin-top:10px; padding-top:10px;}
+  details summary{cursor:pointer; color:var(--teal); font-weight:600; font-size:.88rem; margin-bottom:8px;}
+  ul.hints{margin:8px 0 0; padding-left:18px; font-size:.82rem; color:#1d5e5e;}
+  ul.hints li{margin-bottom:4px;}
+  @media print{ body{background:#fff;} header{background:#1a2332!important; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    .no-print{display:none!important;} .card{break-inside:avoid; box-shadow:none;} .kpi,thead th{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    details{display:block;} details summary{display:none;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏗️ Fix-&amp;-Flip-Rechner</h1>
+  <p>Beta Kurrle Immobilien · GmbH / Aufteiler · Ankauf, Sanierung, Aufteilung, Einzelverkauf · Gesamtinvest, Marge, Steuer auf den Projektgewinn, EK-Rendite, Stress-Tests &middot; <a class="back" href="index.html">← Übersicht</a></p>
+</header>
+
+<div class="wrap">
+  <!-- Ankauf und Finanzierung -->
+  <div class="card">
+    <h2>Ankauf und Finanzierung</h2>
+    <div class="grid g4">
+      <div class="field"><label class="lab">Kaufpreis</label><div class="il"><input type="number" id="kaufpreis" value="600000" step="10000"><span class="unit">€</span></div></div>
+      <div class="field"><label class="lab">Grunderwerbsteuer</label><div class="il"><input type="number" id="grest" value="5.0" step="0.5"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab">Notar / Grundbuch</label><div class="il"><input type="number" id="notar" value="1.5" step="0.1"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab">Makler</label><div class="il"><input type="number" id="makler" value="0" step="0.1"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab">Kaufmonat (Monat 0)</label><div class="il"><input type="month" id="kaufmonat"></div></div>
+      <div class="field"><label class="lab">Eigenkapital</label><div class="il"><input type="number" id="ek" value="250000" step="10000"><span class="unit">€</span></div></div>
+      <div class="field"><label class="lab">Sollzins p.a. (Projektkredit)</label><div class="il"><input type="number" id="zins" value="5.0" step="0.1"><span class="unit">%</span></div></div>
+    </div>
+    <p class="note">Das Darlehen ist eine Rechengröße: Gesamtinvest − Eigenkapital, endfällig, Rückführung aus den Verkaufserlösen. Eigenkapital wird zuerst verbraucht (Kaufpreis vor Sanierung).</p>
+  </div>
+
+  <!-- Sanierung und Aufteilung -->
+  <div class="card">
+    <h2>Sanierung und Aufteilung</h2>
+    <div class="grid g4">
+      <div class="field"><label class="lab">Sanierung: Eingabe als</label>
+        <select id="sanModus"><option value="summe">Summe brutto</option><option value="m2">je m² Wohnfläche (brutto)</option></select></div>
+      <div class="field"><label class="lab" id="sanLab">Sanierung brutto</label><div class="il"><input type="number" id="sanWert" value="300000" step="1000"><span class="unit" id="sanUnit">€</span></div>
+        <div class="metric" id="sanInfo"></div></div>
+      <div class="field"><label class="lab">Unvorhergesehenes</label><div class="il"><input type="number" id="puffer" value="10" min="0" step="1"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab">Aufteilung fix (TE, Abgeschlossenheit, Vermessung)</label><div class="il"><input type="number" id="aufteilung" value="15000" step="1000"><span class="unit">€</span></div></div>
+      <div class="field"><label class="lab">Baubeginn (Monate nach Kauf)</label><div class="il"><input type="number" id="baubeginn" value="2" min="0" step="1"><span class="unit">Mon.</span></div></div>
+      <div class="field"><label class="lab">Bauzeit</label><div class="il"><input type="number" id="bauzeit" value="9" min="0" step="1"><span class="unit">Mon.</span></div></div>
+      <div class="field"><label class="lab" for="vkAktiv"><input type="checkbox" id="vkAktiv" style="width:auto;vertical-align:middle;"> Vermarktungskosten einrechnen</label><div class="il"><input type="number" id="verkaufskosten" value="3" min="0" max="100" step="0.1"><span class="unit">% vom Erlös</span></div></div>
+      <div class="field"><label class="lab">Laufende Objektkosten je Monat, ganzes Objekt, voll bis zum letzten Verkauf (Grundsteuer, Versicherung, Leerstand, Hausgeld)</label><div class="il"><input type="number" id="kosten" value="0" min="0" step="50"><span class="unit">€ brutto</span></div></div>
+    </div>
+    <p class="note">Sanierung brutto: Der Wohnungsverkauf ist umsatzsteuerfrei, die Vorsteuer aus den Bauleistungen also nicht abziehbar. Abfluss gleichmäßig über die Bauzeit (Bauzeit 0: alles im Baubeginn-Monat).</p>
+  </div>
+
+  <!-- Einheiten und Verkauf -->
+  <div class="card">
+    <h2>Einheiten und Verkauf</h2>
+    <div class="grid g4">
+      <div class="field"><label class="lab">Eingabe</label>
+        <select id="vkModus"><option value="pauschal">Pauschal (gleich große Einheiten)</option><option value="liste">Einheitenliste</option></select></div>
+    </div>
+    <div id="pauschalBox">
+      <div class="grid g4">
+        <div class="field"><label class="lab">Anzahl Einheiten</label><div class="il"><input type="number" id="pAnzahl" value="4" min="1" step="1"></div></div>
+        <div class="field"><label class="lab">Wohnfläche gesamt</label><div class="il"><input type="number" id="pFlaeche" value="280" step="1"><span class="unit">m²</span></div></div>
+        <div class="field"><label class="lab">Verkaufspreis</label><div class="il"><input type="number" id="pPreis" value="4000" step="50"><span class="unit">€/m²</span></div></div>
+        <div class="field"><label class="lab">Erster Verkauf: Übergang Nutzen/Lasten (Monate nach Kauf)</label><div class="il"><input type="number" id="pStart" value="11" min="0" step="1"><span class="unit">Mon.</span></div></div>
+        <div class="field"><label class="lab">Abstand der Verkäufe</label><div class="il"><input type="number" id="pAbstand" value="1" min="0" step="1"><span class="unit">Mon.</span></div></div>
+        <div class="field"><label class="lab">Davon vermietet (verkaufen zuletzt)</label><div class="il"><input type="number" id="pVermietet" value="0" min="0" step="1"></div></div>
+        <div class="field"><label class="lab">Kaltmiete je vermietete Einheit</label><div class="il"><input type="number" id="pMiete" value="0" step="50"><span class="unit">€/Mon.</span></div></div>
+        <div class="field"><label class="lab">Preis vermietet (leer oder 0 = gleicher Preis)</label><div class="il"><input type="number" id="pPreisVerm" value="" step="50" placeholder="wie oben"><span class="unit">€/m²</span></div></div>
+      </div>
+      <div class="btnbar no-print"><button class="act soft" id="btnPauschalListe" type="button">Pauschal in Liste übernehmen →</button></div>
+    </div>
+    <div id="listeBox" class="hide">
+      <div style="overflow-x:auto;"><table id="unitTable">
+        <thead><tr><th>Einheit</th><th>Fläche m²</th><th>Preis €/m²</th><th>Verkauf = Übergang Nutzen/Lasten (Monat nach Kauf)</th><th>Kaltmiete €/Mon. bis Verkauf</th><th></th></tr></thead>
+        <tbody id="unitBody"></tbody>
+      </table></div>
+      <div class="btnbar no-print" style="margin-top:10px;"><button class="act soft" id="btnAddUnit" type="button">+ Einheit</button></div>
+    </div>
+    <p class="note">Miete läuft vom Monat nach dem Kauf bis einschließlich Verkaufsmonat (Kaltmiete, ohne Bewirtschaftungskosten). Verkauf jeweils am Monatsende; der Nettoerlös führt zuerst den Kredit zurück.</p>
+  </div>
+
+  <!-- Steuer -->
+  <div class="card">
+    <h2>Steuer der GmbH (gewerblicher Grundstückshandel)</h2>
+    <div class="grid g4">
+      <div class="field"><label class="lab">Gewerbesteuer-Hebesatz (Sitzgemeinde)</label><div class="il"><input type="number" id="hebesatz" value="430" min="0" step="5"><span class="unit">%</span></div></div>
+      <div class="field"><label class="lab" for="hinzuAktiv"><input type="checkbox" id="hinzuAktiv" checked style="width:auto;vertical-align:middle;"> Hinzurechnung Finanzierungsentgelte</label><div class="il"><input type="number" id="hinzuFrei" value="200000" min="0" step="10000"><span class="unit">€ Freibetrag</span></div></div>
+      <div class="field"><label class="lab">Übrige Finanzierungsentgelte der GmbH je Jahr</label><div class="il"><input type="number" id="hinzuSonst" value="0" min="0" step="10000"><span class="unit">€</span></div></div>
+      <div class="field"><label class="lab">Steuersatz gesamt auf den Gewinn</label><div class="metric" id="satzInfo" style="font-size:.9rem;color:var(--ink);"></div></div>
+    </div>
+    <p class="note" id="steuerNote"></p>
+  </div>
+
+  <div class="btnbar no-print">
+    <button class="act" onclick="window.print()">🖨️ Drucken / PDF</button>
+    <button class="act alt" onclick="exportCSV()">⬇️ CSV</button>
+  </div>
+
+  <!-- Ergebnis -->
+  <div class="card">
+    <h2>Ergebnis</h2>
+    <div class="kpis" id="kpis"></div>
+    <div style="overflow-x:auto;"><table id="ktab"></table></div>
+    <div class="warn-box hide" id="warnbox"></div>
+  </div>
+
+  <!-- Stress -->
+  <div class="card">
+    <h2>Stress-Tests</h2>
+    <div style="overflow-x:auto;"><table id="stab"></table></div>
+    <p class="note">Bauzeit-Stress verschiebt alle Verkäufe, die ab dem Bauende geplant sind, um die Verzögerung. Baukosten-Stress wirkt auf die Sanierung vor dem Puffer.</p>
+  </div>
+
+  <!-- Steuer je Jahr -->
+  <div class="card">
+    <h2>Steuer je Kalenderjahr</h2>
+    <div style="overflow-x:auto;"><table id="ttab"></table></div>
+    <p class="note">Gewinn je Wohnung im Jahr des Übergangs von Nutzen und Lasten = Erlös − Vermarktung − anteilige Herstellungskosten (Kaufpreis, Erwerbsnebenkosten, Sanierung, Aufteilung fix nach Fläche). Zinsen, Mieten und laufende Kosten im Jahr des Anfalls. Verluste werden vorgetragen, nicht zurückgetragen; Gewerbeertrag auf volle 100 € abgerundet.</p>
+  </div>
+
+  <!-- Monatsplan -->
+  <div class="card">
+    <details id="planDetails"><summary>Monatsplan (Abfluss, Valuta, Zinsen, Rückführung, Miete)</summary>
+      <div style="overflow-x:auto;"><table id="ptab"></table></div>
+    </details>
+    <ul class="hints" id="hints"></ul>
+    <p class="disclaimer">Vereinfachte Modellrechnung – keine Steuer-, Rechts- oder Finanzierungsberatung. Begriffe und Formeln (Gesamtinvest, Bauzeitzinsen, Marge, LTC, LTV fertig, Break-even, Verkaufsquote bis Volltilgung) wie in der internen Projektrechnung für Bank-Exposés. Zinsen, Aufteilungskosten und Vermarktung werden mitfinanziert, aber nicht verzinst (kein Zirkelbezug, leicht optimistisch). Nicht abgebildet: Verlustrücktrag, Bereitstellungszinsen, abweichendes Wirtschaftsjahr, einfache Gewerbesteuer-Kürzung um die Grundsteuer, Vorauszahlungs- und Veranlagungszeitpunkte. Annahmen vor Verwendung prüfen.</p>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------- Steuerkonstanten (Gesetzesstand gesetze-im-internet.de, gelesen 13.10.2026) ---------- */
+const STEUER={
+  soli:5.5,      // § 4 Satz 1 SolzG 1995: 5,5 % der festgesetzten Körperschaftsteuer, keine Freigrenze für Kapitalgesellschaften (§ 3 Abs. 3 SolzG)
+  messzahl:3.5,  // § 11 Abs. 2 GewStG: Steuermesszahl 3,5 %; kein Freibetrag für eine GmbH (§ 11 Abs. 1 S. 3 i. V. m. § 2 Abs. 2 GewStG)
+  hinzuAnteil:25 // § 8 Nr. 1 GewStG: ein Viertel der Finanzierungsentgelte, soweit die Summe 200.000 € übersteigt (Freibetrag je Unternehmen und Kalenderjahr)
+};
+// § 23 Abs. 1 KStG: Veranlagungszeiträume bis 2027 15 %, 2028 14 %, 2029 13 %, 2030 12 %, 2031 11 %, ab 2032 10 % des zu versteuernden Einkommens
+const kstSatz=(jahr)=>jahr<=2027?15:Math.max(10,15-(jahr-2027));
+// Hebesatz-Vorbelegung 430 %: Stadt Mannheim, Haushaltssatzung 2025/2026 § 5 und Zweite Nachtragshaushaltssatzung 2026 § 5 (430 v. H. für 2025 und 2026); spätere Jahre nicht beschlossen
+
+const eur=new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR",maximumFractionDigits:0});
+const eur2=new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2});
+const pct=(v)=>(v==null||!isFinite(v))?"–":new Intl.NumberFormat("de-DE",{minimumFractionDigits:1,maximumFractionDigits:2}).format(Math.abs(v)<0.005?0:v)+" %";
+const n2=(v)=>new Intl.NumberFormat("de-DE",{minimumFractionDigits:0,maximumFractionDigits:2}).format(v);
+const $=(id)=>document.getElementById(id);
+const num=(id)=>{const v=parseFloat(($(id)||{}).value);return isNaN(v)?0:v;};
+const esc=(s)=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const monatIdx=(s)=>{const p=String(s||"").split("-"); if(p.length<2||isNaN(parseInt(p[0]))||isNaN(parseInt(p[1]))) return null; return parseInt(p[0])*12+parseInt(p[1])-1;};
+
+/* ---------- Einheitenliste (DOM) ---------- */
+function addUnitRow(u){
+  u=u||{}; const tb=$("unitBody");
+  // Standardname: höchster vergebener Index + 1 (nach Löschen keine Doppelnamen)
+  const i=1+[...tb.querySelectorAll(".u-name")].reduce((a,el)=>{const m=/^WE (\d+)$/.exec(el.value.trim()); return m?Math.max(a,+m[1]):a;},0);
+  const tr=document.createElement("tr");
+  tr.innerHTML=`<td><input type="text" class="u-name" value="${esc(u.name!=null?u.name:("WE "+i))}"></td>
+    <td><input type="number" class="u-fl" value="${u.flaeche!=null?u.flaeche:70}" step="0.5"></td>
+    <td><input type="number" class="u-preis" value="${u.preis_m2!=null?u.preis_m2:4000}" step="50"></td>
+    <td><input type="number" class="u-monat" value="${u.verkaufsmonat!=null?u.verkaufsmonat:12}" min="0" step="1"></td>
+    <td><input type="number" class="u-miete" value="${u.miete!=null?u.miete:0}" step="50"></td>
+    <td><button class="mini no-print" type="button" title="Einheit entfernen">✕</button></td>`;
+  tr.querySelector("button").addEventListener("click",()=>{tr.remove(); render();});
+  tb.appendChild(tr);
+  return tr;
+}
+function clearUnits(){ $("unitBody").innerHTML=""; }
+function readUnitRows(){
+  return [...$("unitBody").querySelectorAll("tr")].map((tr,i)=>{
+    const g=(c)=>{const v=parseFloat(tr.querySelector(c).value); return isNaN(v)?0:v;};
+    return {name:tr.querySelector(".u-name").value||("WE "+(i+1)), flaeche:Math.max(0,g(".u-fl")), preis_m2:Math.max(0,g(".u-preis")), verkaufsmonat:mon(g(".u-monat")), miete:Math.max(0,g(".u-miete"))};
+  });
+}
+function pauschalInListe(){
+  if($("unitBody").children.length&&typeof window.confirm==="function"&&window.confirm("Bestehende Einheitenliste ersetzen?")===false) return;
+  const E=readInputs(); E.vk_modus="pauschal";
+  clearUnits(); resolveEinheiten(E).forEach(u=>addUnitRow(u));
+  $("vkModus").value="liste"; applyModes(); render();
+}
+
+/* ---------- Eingaben ---------- */
+const mon=(v)=>Math.min(240,Math.max(0,Math.round(v)));   // Monatsangaben: 0 bis 240 (Tippfehler bremsen sonst die Seite)
+const pos=(id)=>Math.max(0,num(id));
+function readInputs(){
+  const pv=$("pPreisVerm").value;
+  return {
+    kaufpreis:pos("kaufpreis"), grest_pct:pos("grest"), notar_pct:pos("notar"), makler_pct:pos("makler"),
+    kaufmonat:$("kaufmonat").value,
+    san_modus:$("sanModus").value, san_wert:pos("sanWert"), puffer_pct:pos("puffer"),
+    baubeginn:mon(num("baubeginn")), bauzeit:mon(num("bauzeit")),
+    aufteilung_fix:pos("aufteilung"), vk_aktiv:$("vkAktiv").checked, vk_pct:Math.min(100,pos("verkaufskosten")),
+    ek:pos("ek"), zins_pct:pos("zins"), kosten_monat:pos("kosten"),
+    vk_modus:$("vkModus").value,
+    pauschal:{anzahl:Math.max(0,Math.round(num("pAnzahl"))), flaeche_gesamt:pos("pFlaeche"), preis_m2:pos("pPreis"),
+      start:mon(num("pStart")), abstand:mon(num("pAbstand")),
+      vermietet:Math.max(0,Math.round(num("pVermietet"))), miete_vermietet:pos("pMiete"),
+      preis_vermietet_m2:(pv===""||isNaN(parseFloat(pv)))?"":Math.max(0,parseFloat(pv))},
+    einheiten:readUnitRows(),
+    steuer:{soli_pct:STEUER.soli, messzahl_pct:STEUER.messzahl, hebesatz_pct:pos("hebesatz"),
+      hinzu_aktiv:$("hinzuAktiv").checked, hinzu_anteil_pct:STEUER.hinzuAnteil, hinzu_freibetrag:Math.max(0,num("hinzuFrei")), hinzu_sonst:Math.max(0,num("hinzuSonst"))}
+  };
+}
+function resolveEinheiten(E){
+  if(E.vk_modus==="pauschal"){
+    const p=E.pauschal, n=Math.min(200,Math.round(p.anzahl)); if(!(n>0)) return [];
+    const fl=p.flaeche_gesamt/n, verm=Math.min(n,Math.round(p.vermietet||0));
+    const pv=(p.preis_vermietet_m2===""||p.preis_vermietet_m2==null||p.preis_vermietet_m2===0)?p.preis_m2:+p.preis_vermietet_m2;
+    const out=[];
+    for(let i=0;i<n;i++){ const v=(i>=n-verm);
+      out.push({name:"WE "+(i+1), flaeche:fl, preis_m2:v?pv:p.preis_m2, verkaufsmonat:Math.min(240,p.start+i*(p.abstand||0)), miete:v?(p.miete_vermietet||0):0}); }
+    return out;
+  }
+  return E.einheiten.map((u,i)=>({name:u.name||("WE "+(i+1)), flaeche:+u.flaeche, preis_m2:+u.preis_m2, verkaufsmonat:Math.round(+u.verkaufsmonat), miete:+(u.miete||0)}));
+}
+function resolveSanierung(E,fl){ return E.san_modus==="m2"?E.san_wert*fl:E.san_wert; }
+
+/* ---------- Rechenkern ---------- */
+function irrMonat(flows){
+  if(!flows.some(f=>f<0)||!flows.some(f=>f>0)) return null;
+  const npv=(r)=>flows.reduce((s,f,k)=>s+f/Math.pow(1+r,k),0);
+  const s0=npv(0); if(s0===0) return 0;
+  let lo,hi;
+  if(s0>0){ lo=0; hi=0.01; while(npv(hi)>0){ hi*=2; if(hi>100) return null; } }
+  else { lo=-0.01; hi=0; while(npv(lo)<0){ lo=(lo*2>-0.9999)?lo*2:-0.9999; const v=npv(lo); if(!isFinite(v)) return null; if(lo<=-0.9999&&v<0) return null; } }
+  let flo=npv(lo); if(!isFinite(flo)) return null;
+  for(let i=0;i<300;i++){ const mid=(lo+hi)/2, fm=npv(mid); if(!isFinite(fm)) return null; if(flo*fm<=0){hi=mid;} else {lo=mid; flo=fm;} }
+  const res=(lo+hi)/2;
+  return Math.abs(npv(res))<1?res:null;   // nur eine echte Nullstelle ausgeben, sonst „–"
+}
+
+function rechne(E,F){
+  F=F||{}; const kf=F.kosten_faktor||1, pf=F.preis_faktor||1, bzp=F.bauzeit_plus||0, zp=F.zins_plus||0;
+  const einh=resolveEinheiten(E);
+  const flGes=einh.reduce((a,u)=>a+u.flaeche,0);
+  const kp=E.kaufpreis;
+  const enk=kp*(E.grest_pct+E.notar_pct+E.makler_pct)/100;
+  const sanBasis=resolveSanierung(E,flGes)*kf;
+  const san=sanBasis*(1+(E.puffer_pct||0)/100);
+  const auft=E.aufteilung_fix||0;
+  const prov=E.vk_aktiv?E.vk_pct/100:0;
+  const ek=E.ek, zins=(E.zins_pct+zp)/100;
+  const baubeginn=E.baubeginn, bauzeit0=E.bauzeit, bauzeit=bauzeit0+bzp;
+  const bauEnde0=baubeginn+Math.max(bauzeit0,1)-1, bauEnde=baubeginn+Math.max(bauzeit,1)-1;
+  // Bauzeit-Stress: Verkäufe ab dem Bauende des Basisfalls verschieben sich um die Verschiebung des Bauendes
+  const shift=bauEnde-bauEnde0;
+  for(const u of einh){
+    if(shift&&u.verkaufsmonat>=bauEnde0) u.verkaufsmonat+=shift;
+    u.preis_m2*=pf; u.erloes=u.flaeche*u.preis_m2; u.netto=u.erloes*(1-prov);
+  }
+  const mLast=Math.max(bauEnde,...einh.map(u=>u.verkaufsmonat));
+  const mSaleLast=einh.length?Math.max(...einh.map(u=>u.verkaufsmonat)):mLast;
+  const kostenMonat=E.kosten_monat||0;
+
+  let valuta=Math.max(kp+enk-ek,0), ekRest=Math.max(ek-(kp+enk),0);
+  const ekKauf=Math.min(ek,kp+enk);
+  let bzz=0, zinsVk=0, valutaMax=valuta, mieten=0, kosten=0;
+  let fin=0;      // Schuldkonto der mitfinanzierten Kosten (Zinsen, Aufteilung fix): unverzinst, aus Überschüssen getilgt
+  let liquid=0;   // einbehaltene Überschüsse aus Verkäufen vor Bauende (decken spätere Abflüsse vor neuer Valuta)
+  const plan=[], flows=new Array(mLast+1).fill(0), zM=[], mM=[], kM=[];
+  flows[0]-=ekKauf;
+  for(let m=0;m<=mLast;m++){
+    let brutto=0;
+    if(bauzeit>=1&&m>=baubeginn&&m<baubeginn+bauzeit) brutto=san/bauzeit;
+    else if(bauzeit===0&&m===baubeginn) brutto=san;
+    const ausEk=Math.min(ekRest,brutto); ekRest-=ausEk;
+    const ausLiq=Math.min(liquid,brutto-ausEk); liquid-=ausLiq;
+    const abfluss=brutto-ausEk-ausLiq;
+    const z=(bauzeit===0&&m===baubeginn)?(valuta+abfluss)*zins/12:(valuta+abfluss/2)*zins/12;
+    valuta+=abfluss; valutaMax=Math.max(valutaMax,valuta);
+    if(m<=bauEnde) bzz+=z; else zinsVk+=z;
+    fin+=z;
+    flows[m]-=ausEk;
+    // Aufteilung fix im Baubeginn-Monat mitfinanziert; am Bauende tilgt übriges Eigenkapital das Schuldkonto
+    // (Reihenfolge wie Engine: EK deckt Kaufpreis, dann Sanierung – Bauzeitzinsen bleiben engine-identisch)
+    let ausEkAuft=0;
+    if(m===baubeginn) fin+=auft;
+    if(m===bauEnde&&ekRest>0){ ausEkAuft=Math.min(ekRest,fin); ekRest-=ausEkAuft; fin-=ausEkAuft; flows[m]-=ausEkAuft; }
+    // Verkäufe am Monatsende: Nettoerlös tilgt die Valuta, dann das Schuldkonto, der Rest geht ans Eigenkapital
+    const nettoM=einh.reduce((a,u)=>a+(u.verkaufsmonat===m?u.netto:0),0);
+    const rueck=Math.min(valuta,nettoM); valuta-=rueck;
+    const tilgFin=Math.min(fin,nettoM-rueck); fin-=tilgFin;
+    const ueberschuss=nettoM-rueck-tilgFin;
+    if(m<bauEnde) liquid+=ueberschuss; else flows[m]+=ueberschuss;
+    let tilgLiq=0;
+    if(m===bauEnde&&liquid>0){ tilgLiq=Math.min(liquid,fin); fin-=tilgLiq; liquid-=tilgLiq; flows[m]+=liquid; liquid=0; } // Bauende: Topf tilgt erst das Schuldkonto, Rest ans EK
+    const mieteM=einh.reduce((a,u)=>a+((m>=1&&m<=u.verkaufsmonat)?u.miete:0),0);
+    const kostenM=(m>=1&&m<=mSaleLast)?kostenMonat:0;
+    mieten+=mieteM; kosten+=kostenM; flows[m]+=mieteM-kostenM;
+    zM.push(z); mM.push(mieteM); kM.push(kostenM);
+    plan.push({monat:m, abfluss:brutto, ausEk, ausLiq, zins:z, rueck, tilgFin:tilgFin+tilgLiq+ausEkAuft, valuta, miete:mieteM, kosten:kostenM, verkauft:einh.filter(u=>u.verkaufsmonat===m).map(u=>u.name)});
+  }
+  const restvaluta=valuta, restFin=fin;
+  const exitErloes=einh.reduce((a,u)=>a+u.erloes,0);
+  const verm=exitErloes*prov;
+  const gik=kp+enk+san+bzz+auft+verm;
+  const darlehen=Math.max(gik-ek,0);
+  const marge=exitErloes-gik;
+  const gewinnVor=marge-zinsVk+mieten-kosten;
+
+  // Steuer je Kalenderjahr
+  const S=E.steuer; const abs0=monatIdx(E.kaufmonat);
+  const hkGes=kp+enk+san+auft;
+  const jahre=new Map();
+  for(let m=0;m<=mLast;m++){
+    const y=abs0==null?Math.floor(m/12):Math.floor((abs0+m)/12);
+    if(!jahre.has(y)) jahre.set(y,{jahr:y, erloes:0, verm:0, hk:0, mieten:0, kosten:0, zinsen:0, einheiten:0});
+    const J=jahre.get(y); J.zinsen+=zM[m]; J.mieten+=mM[m]; J.kosten+=kM[m];
+    for(const u of einh) if(u.verkaufsmonat===m){ J.erloes+=u.erloes; J.verm+=u.erloes*prov; J.hk+=hkGes*(flGes?u.flaeche/flGes:0); J.einheiten++; }
+  }
+  const soliS=S.soli_pct/100, mess=S.messzahl_pct/100, hebe=S.hebesatz_pct/100;
+  const hzA=S.hinzu_aktiv?S.hinzu_anteil_pct/100:0, hzF=S.hinzu_aktiv?S.hinzu_freibetrag:0, hzS=S.hinzu_sonst||0;
+  const jahrHeute=new Date().getFullYear();
+  let vKst=0, vGew=0, steuer=0; const steuerjahre=[], mindestJahre=[];
+  for(const y of [...jahre.keys()].sort((a,b)=>a-b)){
+    const J=jahre.get(y);
+    const erg=J.erloes-J.verm-J.hk+J.mieten-J.kosten-J.zinsen;
+    const kalenderjahr=abs0==null?jahrHeute+y:y;            // ohne Kaufmonat: Projektjahre ab heute
+    const kstS=kstSatz(kalenderjahr)/100;                   // § 23 Abs. 1 KStG, Satz je Veranlagungszeitraum
+    // Mindestbesteuerung: Verlustabzug bis 1 Mio. € unbeschränkt, darüber 70 % (KSt bis VZ 2027, § 10d Abs. 2 EStG)
+    // bzw. 60 % (KSt ab VZ 2028 laut Wachstumschancengesetz, nur sekundär belegt; GewSt § 10a GewStG)
+    const cap=(e,q)=>e<=1e6?e:1e6+q*(e-1e6);
+    let mindest=false;
+    let basisK; if(erg<0){vKst+=-erg; basisK=0;} else {const uK=Math.min(vKst,cap(erg,kalenderjahr<=2027?0.7:0.6)); if(uK<Math.min(vKst,erg)) mindest=true; vKst-=uK; basisK=erg-uK;}
+    const kst=basisK*kstS, soli=kst*soliS;
+    // § 8 Nr. 1 GewStG: Freibetrag gilt für alle Finanzierungsentgelte der GmbH im Jahr; hier nur der Anteil dieses Projekts
+    const hinzu=hzA*(Math.max(0,J.zinsen+hzS-hzF)-Math.max(0,hzS-hzF));
+    const ge=erg+hinzu;
+    let basisG; if(ge<0){vGew+=-ge; basisG=0;} else {const uG=Math.min(vGew,cap(ge,0.6)); if(uG<Math.min(vGew,ge)) mindest=true; vGew-=uG; basisG=ge-uG;}
+    basisG=Math.floor(basisG/100)*100;                      // § 11 Abs. 1 S. 3 GewStG: auf volle 100 Euro abrunden
+    const gewst=basisG*mess*hebe;
+    if(mindest) mindestJahre.push(kalenderjahr);
+    const st=kst+soli+gewst; steuer+=st;
+    const mDez=abs0==null?(y*12+11):(y*12+11-abs0);
+    const mTax=Math.min(Math.max(mDez,0),mLast);
+    flows[mTax]-=st;
+    steuerjahre.push({jahr:kalenderjahr, kstSatz:kstSatz(kalenderjahr), ergebnis:erg, hinzurechnung:hinzu, kst, soli, gewst, steuer:st, vortragKst:vKst, vortragGew:vGew, zinsen:J.zinsen, mieten:J.mieten, kosten:J.kosten, einheiten:J.einheiten, erloes:J.erloes, verm:J.verm, hk:J.hk, zahlmonat:mTax});
+  }
+  const gewinnNach=gewinnVor-steuer;
+  // Restvaluta und nicht getilgte mitfinanzierte Kosten am Projektende aus Eigenmitteln (Nachschuss)
+  flows[mLast]-=restvaluta+restFin;
+  const ekEingesetzt=Math.min(ek,gik);
+  const roe=ekEingesetzt>0?gewinnNach/ekEingesetzt:null;
+  const rM=ekEingesetzt>0?irrMonat(flows):null;
+  const irr=rM==null?null:(Math.pow(1+rM,12)-1);
+  const nettos=einh.map(u=>u.netto).sort((a,b)=>b-a);
+  let noetig=0;
+  if(darlehen>0){ let kum=0; noetig=nettos.length; for(let i=0;i<nettos.length;i++){ kum+=nettos[i]; if(kum>=darlehen){noetig=i+1; break;} } }
+  const be=(flGes&&prov<1)?(kp+enk+san+bzz+auft)/(flGes*(1-prov)):null;
+  return {einheiten:einh, flGes, enk, san, sanBasis, bzz, zinsVk, mieten, kosten, auft, verm, gik, darlehen, valutaMax, restvaluta, restFin,
+    exitErloes, marge, margePct:gik?marge/gik*100:null, ltcPct:gik?darlehen/gik*100:null, ltvPct:exitErloes?darlehen/exitErloes*100:null,
+    be, noetig, von:einh.length, quotePct:einh.length?noetig/einh.length*100:null,
+    gewinnVor, steuer, gewinnNach, ekEingesetzt, roePct:roe==null?null:roe*100, irrPct:irr==null?null:irr*100,
+    bauEnde, mSaleLast, mLast, steuerjahre, mindestJahre, plan, flows, sumFlows:flows.reduce((a,b)=>a+b,0), prov};
+}
+
+const STRESS=[
+  ["Baukosten +10 %",{kosten_faktor:1.10}],["Baukosten +20 %",{kosten_faktor:1.20}],["Verkaufspreis −10 %",{preis_faktor:0.90}],
+  ["Bauzeit +3 Monate",{bauzeit_plus:3}],["Bauzeit +6 Monate",{bauzeit_plus:6}],["Zins +1 %-Punkt",{zins_plus:1.0}],
+  ["Worst Case: Baukosten +20 % und Verkaufspreis −10 %",{kosten_faktor:1.20,preis_faktor:0.90}]
+];
+function stress(E){ return STRESS.map(([name,F])=>{const r=rechne(JSON.parse(JSON.stringify(E)),F); return {szenario:name, gik:r.gik, darlehen:r.darlehen, marge:r.marge, margePct:r.margePct, ltvPct:r.ltvPct, gewinnNach:r.gewinnNach, roePct:r.roePct, irrPct:r.irrPct};}); }
+
+/* ---------- Anzeige ---------- */
+let LAST=null;
+function applyModes(){
+  const m2=$("sanModus").value==="m2";
+  $("sanLab").textContent=m2?"Sanierung je m² Wohnfläche (brutto)":"Sanierung brutto"; $("sanUnit").textContent=m2?"€/m²":"€";
+  const liste=$("vkModus").value==="liste";
+  $("pauschalBox").classList.toggle("hide",liste); $("listeBox").classList.toggle("hide",!liste);
+  if(liste&&!$("unitBody").children.length){ const E=readInputs(); E.vk_modus="pauschal"; resolveEinheiten(E).forEach(u=>addUnitRow(u)); }
+}
+function cls(v){ return v<0?"neg":"pos"; }
+function render(){
+  const E=readInputs(); const r=rechne(JSON.parse(JSON.stringify(E))); const st=stress(E); LAST={E,r,st};
+  // Sanierung: Gegenwert anzeigen
+  $("sanInfo").textContent=r.flGes?(E.san_modus==="m2"?"= "+eur.format(r.sanBasis)+" gesamt":"= "+n2(r.sanBasis/r.flGes)+" €/m²")+" · mit Puffer "+eur.format(r.san):"";
+  // Steuersatz
+  const j0=r.steuerjahre.length?r.steuerjahre[0].jahr:new Date().getFullYear();
+  const satz=(j)=>kstSatz(j)*(1+STEUER.soli/100)+STEUER.messzahl*E.steuer.hebesatz_pct/100;
+  const jN=Math.max(j0+1,2028);
+  const p3=(v)=>new Intl.NumberFormat("de-DE",{minimumFractionDigits:1,maximumFractionDigits:3}).format(v)+" %";
+  $("satzInfo").textContent=j0+": KSt "+p3(kstSatz(j0))+" + Soli "+p3(kstSatz(j0)*STEUER.soli/100)+" + GewSt "+p3(STEUER.messzahl*E.steuer.hebesatz_pct/100)+" = "+p3(satz(j0))+(j0<2032?" · KSt sinkt ab 2028 jährlich um 1 Punkt bis 10 % (2032): "+jN+" "+p3(satz(jN)):"");
+  $("steuerNote").textContent="Objekte sind Umlaufvermögen (keine AfA). Erweiterte Grundstückskürzung greift beim Händler nicht; die einfache Kürzung um die Grundsteuer ist nicht abgebildet (leicht vorsichtig). Verlustvortrag getrennt für KSt und GewSt; kein Rücktrag. Hebesatz 430 % = Stadt Mannheim für 2025 und 2026 (Haushaltssatzung); spätere Jahre sind nicht beschlossen, bei Sitz in einer anderen Gemeinde anpassen. Alle Beträge brutto eingeben: auch Aufteilung und Vermarktung tragen Umsatzsteuer ohne Vorsteuerabzug.";
+  // KPIs
+  const k=[
+    {l:"Gewinn nach Steuern",v:eur.format(r.gewinnNach),s:"vor Steuern "+eur.format(r.gewinnVor)+" · Steuer "+eur.format(r.steuer),neg:r.gewinnNach<0},
+    {l:"Marge (Exit − Gesamtinvest)",v:eur.format(r.marge),s:pct(r.margePct)+" vom Gesamtinvest",neg:r.marge<0},
+    {l:"EK-Rendite",v:pct(r.roePct)+" gesamt",s:(r.irrPct==null?"p.a.: –":"p.a. (IRR): "+pct(r.irrPct))+" · EK "+eur.format(r.ekEingesetzt),neg:(r.roePct||0)<0},
+    {l:"Gesamtinvest",v:eur.format(r.gik),s:"Darlehen "+eur.format(r.darlehen)+" · LTC "+pct(r.ltcPct)}
+  ];
+  $("kpis").innerHTML=k.map(x=>`<div class="kpi${x.neg?" neg":""}"><div class="l">${x.l}</div><div class="v">${x.v}</div><div class="s">${x.s}</div></div>`).join("");
+  // Kennzahlentabelle
+  const rows=[
+    ["Kaufpreis",eur2.format(E.kaufpreis)],["Erwerbsnebenkosten",eur2.format(r.enk)],["Sanierung brutto inkl. Puffer",eur2.format(r.san)],
+    ["Bauzeitzinsen (Kauf bis Bauende, Monat "+r.bauEnde+")",eur2.format(r.bzz)],["Aufteilung fix",eur2.format(r.auft)],
+    ["Vermarktung ("+pct(r.prov*100)+")",eur2.format(r.verm)],["<b>Gesamtinvest (GIK)</b>","<b>"+eur2.format(r.gik)+"</b>"],
+    ["Gesamtinvest je m² Wohnfläche",r.flGes?eur2.format(r.gik/r.flGes):"–"],
+    ["Eigenkapital eingesetzt",eur2.format(r.ekEingesetzt)],["Darlehen (GIK − EK)",eur2.format(r.darlehen)],["Kreditspitze (höchste Valuta)",eur2.format(r.valutaMax)],
+    ["Zinsen Verkaufsphase (nach Bauende)",eur2.format(r.zinsVk)],["Mieteinnahmen bis Verkauf",eur2.format(r.mieten)],["Laufende Objektkosten bis letzter Verkauf",eur2.format(r.kosten)],
+    ["<b>Exit-Erlös</b> ("+n2(r.flGes)+" m², "+r.von+" Einheiten)","<b>"+eur2.format(r.exitErloes)+"</b>"],
+    ["Marge / Marge %",`<span class="${cls(r.marge)}">${eur2.format(r.marge)} / ${pct(r.margePct)}</span>`],
+    ["LTC (Darlehen / GIK)",pct(r.ltcPct)],["LTV fertig (Darlehen / Exit)",pct(r.ltvPct)],
+    ["Break-even je m² (ohne Zinsen der Verkaufsphase, laufende Kosten und Mieten)",r.be==null?"–":eur2.format(r.be)],
+    ["Verkaufsquote bis Volltilgung",(r.restvaluta+r.restFin>0.005)?"nicht erreicht (Nachschuss "+eur2.format(r.restvaluta+r.restFin)+")":r.noetig+" von "+r.von+" Einheiten ("+pct(r.quotePct)+"), nach Erlös absteigend"],
+    ["Projektgewinn vor Steuern",`<span class="${cls(r.gewinnVor)}">${eur2.format(r.gewinnVor)}</span>`],["Steuer (KSt + Soli + GewSt)",eur2.format(r.steuer)],
+    ["<b>Gewinn nach Steuern</b>",`<b class="${cls(r.gewinnNach)}">${eur2.format(r.gewinnNach)}</b>`],
+    ["EK-Rendite gesamt / p.a. (IRR)",pct(r.roePct)+" / "+pct(r.irrPct)],
+    ["Projektdauer",r.mLast+" Monate (Kauf bis letzter Verkauf bzw. Bauende)"]
+  ];
+  $("ktab").innerHTML="<tbody>"+rows.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td></tr>`).join("")+"</tbody>";
+  // Warnungen
+  const w=[];
+  if(!r.von) w.push("Keine Einheit eingetragen.");
+  else if(!(r.flGes>0)) w.push("Wohnfläche 0: Erlös, Herstellungskosten je Einheit und Break-even sind nicht berechenbar.");
+  if(!(E.kaufpreis>0)) w.push("Kaufpreis fehlt oder ist 0.");
+  const letztesJahr=r.steuerjahre[r.steuerjahre.length-1];
+  const verlustNachGewinn=r.steuerjahre.some((j,i)=>j.ergebnis<0&&r.steuerjahre.slice(0,i).some(k=>k.kst>0));
+  if(letztesJahr&&letztesJahr.vortragKst>0.5&&verlustNachGewinn) w.push("Ungenutzter Verlustvortrag am Projektende "+eur.format(letztesJahr.vortragKst)+" (KSt) nach einem Gewinnjahr: Ein Verlustrücktrag ist nicht abgebildet, die Steuer ist eher zu hoch gerechnet.");
+  if(r.restvaluta+r.restFin>0.005) w.push("Die Verkaufserlöse decken den Kredit nicht: Nachschuss aus Eigenmitteln am Projektende "+eur.format(r.restvaluta+r.restFin)+" (Restvaluta "+eur.format(r.restvaluta)+", nicht getilgte mitfinanzierte Zinsen und Aufteilung "+eur.format(r.restFin)+").");
+  if(r.einheiten.some(u=>u.verkaufsmonat<r.bauEnde)) w.push("Mindestens eine Einheit wird vor dem Bauende verkauft.");
+  if(E.ek>r.gik) w.push("Eigenkapital übersteigt den Gesamtinvest; gerechnet wird mit "+eur.format(r.ekEingesetzt)+".");
+  if(monatIdx(E.kaufmonat)==null) w.push("Kaufmonat fehlt: Steuerjahre werden als Projektjahre ab heute gezählt.");
+  if(r.mindestJahre.length) w.push("Mindestbesteuerung greift im Jahr "+r.mindestJahre.join(", ")+": Verlustabzug bis 1 Mio. € voll, darüber nur bis 70 % (KSt bis 2027) bzw. 60 % (KSt ab 2028, GewSt) des 1 Mio. € übersteigenden Gewinns; der Rest bleibt als Vortrag stehen.");
+  $("warnbox").classList.toggle("hide",!w.length); $("warnbox").innerHTML=w.join("<br>");
+  // Stress
+  const base={szenario:"Basisfall",gik:r.gik,darlehen:r.darlehen,marge:r.marge,margePct:r.margePct,ltvPct:r.ltvPct,gewinnNach:r.gewinnNach,roePct:r.roePct,irrPct:r.irrPct};
+  $("stab").innerHTML="<thead><tr><th>Szenario</th><th>Gesamtinvest</th><th>Darlehen</th><th>Marge</th><th>Marge %</th><th>LTV fertig</th><th>Gewinn nach Steuern</th><th>EK-Rendite</th><th>p.a.</th></tr></thead><tbody>"+
+    [base,...st].map(x=>`<tr><td>${x.szenario}</td><td>${eur.format(x.gik)}</td><td>${eur.format(x.darlehen)}</td><td class="${cls(x.marge)}">${eur.format(x.marge)}</td><td>${pct(x.margePct)}</td><td>${pct(x.ltvPct)}</td><td class="${cls(x.gewinnNach)}">${eur.format(x.gewinnNach)}</td><td>${pct(x.roePct)}</td><td>${pct(x.irrPct)}</td></tr>`).join("")+"</tbody>";
+  // Steuer je Jahr
+  $("ttab").innerHTML="<thead><tr><th>Jahr</th><th>Verkäufe</th><th>Erlös − Vermarktung − HK</th><th>Mieten</th><th>Laufende Kosten</th><th>Zinsen</th><th>Ergebnis</th><th>Hinzurechnung</th><th>KSt (Satz)</th><th>Soli</th><th>GewSt</th><th>Steuer</th><th>Verlustvortrag KSt / GewSt</th></tr></thead><tbody>"+
+    r.steuerjahre.map(j=>`<tr><td>${j.jahr}</td><td>${j.einheiten}</td><td>${eur.format(j.erloes-j.verm-j.hk)}</td><td>${eur.format(j.mieten)}</td><td>${eur.format(j.kosten)}</td><td>${eur.format(j.zinsen)}</td><td class="${cls(j.ergebnis)}">${eur.format(j.ergebnis)}</td><td>${eur.format(j.hinzurechnung)}</td><td>${eur.format(j.kst)} (${pct(j.kstSatz)})</td><td>${eur.format(j.soli)}</td><td>${eur.format(j.gewst)}</td><td><b>${eur.format(j.steuer)}</b></td><td>${eur.format(j.vortragKst)} / ${eur.format(j.vortragGew)}</td></tr>`).join("")+
+    `<tr class="sum"><td>Summe</td><td>${r.von}</td><td>${eur.format(r.exitErloes-r.verm-(r.einheiten.length?(E.kaufpreis+r.enk+r.san+r.auft):0))}</td><td>${eur.format(r.mieten)}</td><td>${eur.format(r.kosten)}</td><td>${eur.format(r.bzz+r.zinsVk)}</td><td class="${cls(r.gewinnVor)}">${eur.format(r.gewinnVor)}</td><td></td><td>${eur.format(r.steuerjahre.reduce((a,j)=>a+j.kst,0))}</td><td>${eur.format(r.steuerjahre.reduce((a,j)=>a+j.soli,0))}</td><td>${eur.format(r.steuerjahre.reduce((a,j)=>a+j.gewst,0))}</td><td><b>${eur.format(r.steuer)}</b></td><td></td></tr></tbody>`;
+  // Monatsplan
+  const abs0=monatIdx(E.kaufmonat);
+  const mName=(m)=>abs0==null?("M"+m):(()=>{const a=abs0+m; return String(Math.floor(a/12))+"-"+String(a%12+1).padStart(2,"0");})();
+  $("ptab").innerHTML="<thead><tr><th>Monat</th><th>Datum</th><th>Sanierung</th><th>davon EK</th><th>davon Überschuss</th><th>Zins</th><th>Rückführung Valuta</th><th>Tilgung Zinsen/Aufteilung</th><th>Valuta Ende</th><th>Miete</th><th>Kosten</th><th>Verkauft</th></tr></thead><tbody>"+
+    r.plan.map(p=>`<tr><td>${p.monat}</td><td>${mName(p.monat)}</td><td>${eur.format(p.abfluss)}</td><td>${eur.format(p.ausEk)}</td><td>${eur.format(p.ausLiq)}</td><td>${eur2.format(p.zins)}</td><td>${eur.format(p.rueck)}</td><td>${eur.format(p.tilgFin)}</td><td>${eur.format(p.valuta)}</td><td>${eur.format(p.miete)}</td><td>${eur.format(p.kosten)}</td><td style="text-align:left;white-space:normal;">${esc(p.verkauft.join(", "))}</td></tr>`).join("")+"</tbody>";
+  $("hints").innerHTML=["Bauzeitzinsen: Zinsen vom Kaufmonat bis zum Bauende auf die Valuta (Kaufpreis + Nebenkosten + Sanierungsabflüsse − Eigenkapital); der Sanierungsabfluss eines Monats zählt zur Hälfte (Bauzeit 0: voll im Baubeginn-Monat), Zinsen werden nicht kapitalisiert. Verkäufe vor dem Bauende führen die Valuta zurück; ihr Überschuss bleibt bis zum Bauende im Projekt, deckt spätere Abflüsse und tilgt am Bauende zuerst die mitfinanzierten Zinsen und die Aufteilung.",
+    "Gesamtinvest = Kaufpreis + Erwerbsnebenkosten + Sanierung + Bauzeitzinsen + Aufteilung fix + Vermarktung. Marge = Exit-Erlös − Gesamtinvest. Zinsen nach dem Bauende und laufende Objektkosten mindern zusätzlich den Projektgewinn, Mieten erhöhen ihn.",
+    "Zinsen und Aufteilungskosten werden mitfinanziert (unverzinst) und aus den Verkaufserlösen nach der Valuta getilgt; erst danach fließen Überschüsse an das Eigenkapital. Steuern und laufende Kosten zahlt das Eigenkapital laufend (vorsichtig). Bei laufendem Zinsdienst aus Eigenmitteln liegt die EK-Rendite p.a. niedriger.",
+    "EK-Rendite p.a. = interner Zins der monatlichen Eigenkapital-Zahlungsreihe (Einsatz, Überschüsse nach Tilgung, Mieten, laufende Kosten, Steuern am Jahresende bzw. spätestens im letzten Projektmonat, Nachschuss für Restvaluta und nicht getilgte Kosten am Projektende).",
+    "Steuer: Die GmbH gilt als reine Projektgesellschaft; Verluste werden nur innerhalb des Projekts verrechnet, weitere Einkünfte der GmbH sind nicht abgebildet. Die Sanierung wird vollständig als Herstellungskosten behandelt (ein Erhaltungsanteil würde früher wirken)."].map(h=>"<li>"+h+"</li>").join("");
+}
+
+/* ---------- CSV ---------- */
+function exportCSV(){
+  if(!LAST) return; const {E,r,st}=LAST; const de=(v)=>(v==null||!isFinite(v)?"":(""+(Math.abs(+v)<0.005?0:+v).toFixed(2)).replace(".",","));
+  const L=["Fix-&-Flip-Rechner;Kennzahl;Wert"];
+  const add=(a,b,c)=>L.push([a,b,c].join(";"));
+  [["Kaufpreis",E.kaufpreis],["Erwerbsnebenkosten",r.enk],["Sanierung inkl. Puffer",r.san],["Bauzeitzinsen",r.bzz],["Aufteilung fix",r.auft],["Vermarktung",r.verm],["Gesamtinvest",r.gik],
+   ["Eigenkapital eingesetzt",r.ekEingesetzt],["Darlehen",r.darlehen],["Kreditspitze",r.valutaMax],["Zinsen Verkaufsphase",r.zinsVk],["Mieteinnahmen",r.mieten],["Laufende Kosten",r.kosten],["Nachschuss am Ende",r.restvaluta+r.restFin],["Exit-Erloes",r.exitErloes],
+   ["Marge",r.marge],["Marge %",r.margePct],["LTC %",r.ltcPct],["LTV fertig %",r.ltvPct],["Break-even je m2",r.be],["Verkaufsquote Einheiten",(r.restvaluta+r.restFin>0.005)?null:r.noetig],["Verkaufsquote %",(r.restvaluta+r.restFin>0.005)?null:r.quotePct],
+   ["Gewinn vor Steuern",r.gewinnVor],["Steuer",r.steuer],["Gewinn nach Steuern",r.gewinnNach],["EK-Rendite gesamt %",r.roePct],["EK-Rendite p.a. %",r.irrPct]].forEach(x=>add("Kennzahl",x[0],de(x[1])));
+  L.push("");L.push("Stress;Szenario;Gesamtinvest;Darlehen;Marge;Marge %;LTV fertig %;Gewinn nach Steuern;EK-Rendite %;p.a. %");
+  [{szenario:"Basisfall",gik:r.gik,darlehen:r.darlehen,marge:r.marge,margePct:r.margePct,ltvPct:r.ltvPct,gewinnNach:r.gewinnNach,roePct:r.roePct,irrPct:r.irrPct},...st]
+    .forEach(x=>L.push(["Stress",x.szenario,de(x.gik),de(x.darlehen),de(x.marge),de(x.margePct),de(x.ltvPct),de(x.gewinnNach),de(x.roePct),de(x.irrPct)].join(";")));
+  L.push("");L.push("Steuer;Jahr;Verkaeufe;Ergebnis;Hinzurechnung;KSt-Satz %;KSt;Soli;GewSt;Steuer;Verlustvortrag KSt;Verlustvortrag GewSt");
+  r.steuerjahre.forEach(j=>L.push(["Steuer",j.jahr,j.einheiten,de(j.ergebnis),de(j.hinzurechnung),de(j.kstSatz),de(j.kst),de(j.soli),de(j.gewst),de(j.steuer),de(j.vortragKst),de(j.vortragGew)].join(";")));
+  L.push("");L.push("Monat;Nr;Sanierung;davon EK;davon Ueberschuss;Zins;Rueckfuehrung Valuta;Tilgung Zinsen/Aufteilung;Valuta Ende;Miete;Kosten");
+  r.plan.forEach(p=>L.push(["Monat",p.monat,de(p.abfluss),de(p.ausEk),de(p.ausLiq),de(p.zins),de(p.rueck),de(p.tilgFin),de(p.valuta),de(p.miete),de(p.kosten)].join(";")));
+  const blob=new Blob(["﻿"+L.join("\n")],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="fix-flip-rechner.csv"; document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- Start ---------- */
+(function init(){
+  const d=new Date(); d.setMonth(d.getMonth()+1);
+  $("kaufmonat").value=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+  $("sanModus").addEventListener("change",()=>{ // Betrag beim Umschalten umrechnen, damit das Ergebnis gleich bleibt
+    applyModes();
+    const E=readInputs(); const fl=resolveEinheiten(E).reduce((a,u)=>a+u.flaeche,0);
+    if(!(fl>0)){ $("sanModus").value=E.san_modus==="m2"?"summe":"m2"; applyModes(); render(); return; } // ohne Fläche kein Wechsel
+    $("sanWert").value=(E.san_modus==="m2"?E.san_wert/fl:E.san_wert*fl).toFixed(4).replace(/\.?0+$/,"");
+    render();});
+  $("vkModus").addEventListener("change",()=>{applyModes();render();});
+  $("btnAddUnit").addEventListener("click",()=>{addUnitRow(); render();});
+  $("btnPauschalListe").addEventListener("click",pauschalInListe);
+  document.addEventListener("input",render);
+  document.addEventListener("change",render);
+  applyModes(); render();
+})();
+
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(function(){});});}
+</script>
+</body>
+</html>
