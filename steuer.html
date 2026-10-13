@@ -26,6 +26,9 @@
       background: radial-gradient(circle, rgba(168,218,220,.25), rgba(168,218,220,0) 70%); border-radius: 50%; }
   header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: .2px; }
   header p { margin: 6px 0 0; opacity: .9; font-size: .85rem; color: var(--seafoam); position: relative; }
+  header a.back { display: inline-block; margin: 0 0 12px; padding: 8px 14px; border: 1px solid rgba(168,218,220,.6); border-radius: 999px;
+      background: rgba(255,255,255,.14); color: #fff; font-size: .9rem; font-weight: 600; line-height: 1.2; text-decoration: none; position: relative; z-index: 1; }
+  header a.back:hover, header a.back:focus-visible { background: rgba(255,255,255,.26); }
   .wrap { max-width: 1700px; margin: 0 auto; padding: 24px 20px; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 22px; }
   @media (max-width: 920px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px;
@@ -101,6 +104,7 @@
 </head>
 <body>
 <header>
+  <a class="back no-print" href="index.html">← Übersicht</a>
   <h1>Finanzierungs-Rechner mit Steuer, AfA &amp; Verkauf</h1>
   <p>Beta Kurrle Immobilien &middot; Cashflow vor/nach Steuern &middot; Mietsteigerung &middot; Restnutzungsdauer-Gutachten &middot; Verkaufsszenario mit Spekulationssteuer</p>
 </header>

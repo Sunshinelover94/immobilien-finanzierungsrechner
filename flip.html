@@ -23,7 +23,9 @@
     background:radial-gradient(circle,rgba(168,218,220,.25),rgba(168,218,220,0) 70%); border-radius:50%;}
   header h1{margin:0; font-size:1.4rem; font-weight:800;}
   header p{margin:6px 0 0; color:var(--seafoam); font-size:.85rem;}
-  header a.back{color:var(--seafoam); font-size:.8rem; text-decoration:none; position:relative;}
+  header a.back{display:inline-block; margin:0 0 12px; padding:8px 14px; border:1px solid rgba(168,218,220,.6); border-radius:999px;
+    background:rgba(255,255,255,.14); color:#fff; font-size:.9rem; font-weight:600; line-height:1.2; text-decoration:none; position:relative; z-index:1;}
+  header a.back:hover,header a.back:focus-visible{background:rgba(255,255,255,.26);}
   .wrap{max-width:1240px; margin:0 auto; padding:22px 18px 50px;}
   .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:18px;
     box-shadow:0 1px 2px rgba(26,35,50,.04),0 14px 30px -18px rgba(26,35,50,.22);}
@@ -80,8 +82,9 @@
 </head>
 <body>
 <header>
+  <a class="back no-print" href="index.html">← Übersicht</a>
   <h1>🏗️ Fix-&amp;-Flip-Rechner</h1>
-  <p>Beta Kurrle Immobilien · GmbH / Aufteiler · Ankauf, Sanierung, Aufteilung, Einzelverkauf · Gesamtinvest, Marge, Steuer auf den Projektgewinn, EK-Rendite, Stress-Tests &middot; <a class="back" href="index.html">← Übersicht</a></p>
+  <p>Beta Kurrle Immobilien · GmbH / Aufteiler · Ankauf, Sanierung, Aufteilung, Einzelverkauf · Gesamtinvest, Marge, Steuer auf den Projektgewinn, EK-Rendite, Stress-Tests</p>
 </header>
 
 <div class="wrap">
